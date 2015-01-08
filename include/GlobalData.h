@@ -12,6 +12,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -25,8 +26,10 @@
 #include <boost/program_options.hpp>
 
 #include "quark.h"
+#include "typedefs.h"
 
 class GlobalData {
+
 
 private:
   //! A pointer on the class itself
@@ -44,8 +47,16 @@ private:
   int dirac_max;
   int displ_min;
   int displ_max;
+  size_t number_of_displ;
+  size_t number_of_dirac;
   int start_config, end_config, delta_config;
   int verbose;
+  size_t number_of_operators;
+  size_t number_of_displ_gamma;
+  size_t number_of_momentum_squared;
+  size_t index_of_unity;
+  size_t number_of_VdaggerV;
+  size_t number_of_rVdaggerVr;
   std::string path_eigenvectors;
   std::string name_eigenvectors;
   std::string path_perambulators;
@@ -57,8 +68,30 @@ private:
   std::vector<int> momentum_squared;
   void quark_input_data_handling (const std::vector<std::string> quark_configs);
 
+////////////////////////////////////////////////////////////////////////////////
+  //TODO: Clean that up
+
+  //dirac structure hardcoded
+  std::vector<size_t> dg;
+
+  vec_pdg_Corr op_Corr;
+  vec_pdg_C2 op_C2;
+  vec_pdg_C4 op_C4;
+  std::list<std::pair<size_t, size_t>> op_rVdaggerVr;
+  indexlist_2 rnd_vec_C2;
+  indexlist_4 rnd_vec_C4;
+
+  void init_from_infile();
+  void set_Corr();
+  void set_C2();
+  void set_C4();
+  void set_rnd_vec_C2();
+  void set_rnd_vec_C4();
+////////////////////////////////////////////////////////////////////////////////
+
 
 public:
+
   static GlobalData* Instance ();
 
   void read_parameters(int ac, char* av[]);
@@ -108,6 +141,9 @@ public:
   inline int get_number_of_momenta() {
     return momentum_squared.size();
   }
+  inline const std::vector<size_t>& get_displ_gamma() {
+    return dg;
+  }
   inline int get_dirac_min() {
     return dirac_min;
   }
@@ -135,6 +171,21 @@ public:
   inline int get_verbose() {
     return verbose;
   }
+  inline size_t get_number_of_operators() {
+    return number_of_operators;
+  }
+  inline size_t get_number_of_displ_gamma() {
+    return number_of_displ_gamma;
+  }
+  inline size_t get_number_of_displ() {
+    return number_of_displ;
+  }
+  inline size_t get_number_of_dirac() {
+    return number_of_dirac;
+  }
+  inline size_t get_number_of_momentum_squared() {
+    return number_of_momentum_squared;
+  }
   inline std::string get_path_eigenvectors() {
     return path_eigenvectors;
   }
@@ -152,6 +203,33 @@ public:
   }
   inline std::vector<int> get_momentum_squared() {
     return momentum_squared;
+  }
+  inline const vec_pdg_Corr& get_op_Corr() {
+    return op_Corr;
+  }
+  inline const vec_pdg_C2& get_op_C2() {
+    return op_C2;
+  }
+  inline const vec_pdg_C4& get_op_C4() {
+    return op_C4;
+  }
+  inline const indexlist_2& get_rnd_vec_C2() {
+    return rnd_vec_C2;
+  }
+  inline const indexlist_4& get_rnd_vec_C4() {
+    return rnd_vec_C4;
+  }
+  inline const size_t get_number_of_VdaggerV() {
+    return number_of_VdaggerV;
+  }
+  inline const size_t get_number_of_rVdaggerVr() {
+    return number_of_rVdaggerVr;
+  }
+  inline const size_t get_index_of_unity() {
+    return index_of_unity;
+  }
+  inline const std::list<std::pair<size_t, size_t> > get_op_rVdaggerVr() {
+    return op_rVdaggerVr;
   }
 
   //! All con/de-structors are protected to assure that only one instance exists

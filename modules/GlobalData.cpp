@@ -73,6 +73,606 @@ quark make_quark (const std::string& quark_string) {
       boost::lexical_cast<int>(tokens[7]));
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//TODO: clean that up ////////////////////////////////////////////////////////// 
+//init operator ////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+void GlobalData::init_from_infile() {
+
+  //TODO: think about the numbers of momenta, displacements and gamma
+  const size_t nb_mom = get_number_of_momenta(); //momentum_squared.size();
+  const size_t nb_mom_sq = number_of_momentum_squared;
+  //TODO: include displacement into dg (displacementgamma) multiindex
+  const size_t nb_dg = number_of_displ_gamma;
+  const size_t nb_dis = number_of_displ;
+
+  // nb_op - number of combinations of three-momenta and gamma structures
+  // op    - vector of all three-momenta, three-displacements and gamma 
+  //         structure combinations
+  const size_t nb_op = number_of_operators;
+  op_Corr.resize(nb_op);
+  set_Corr();
+
+  // nb_op_C2 - number of combinations of absolute values squared of momenta
+  //            and gamma-displacement combinations for 2pt-fct
+  // op_C2    - vector of all combinations for 2pt-fct and vector of 
+  //            op-index-pairs with all corresponding three-vectors and gammas
+  const size_t nb_op_C2 = nb_mom_sq * nb_dg * nb_dg;
+  op_C2.resize(nb_op_C2);
+  set_C2();
+
+  const size_t nb_op_C4 = nb_mom_sq * nb_mom_sq * nb_dg * nb_dg;
+  op_C4.resize(nb_op_C4);
+  set_C4();
+
+  // rnd_vec_C2    - list of all combinations of randomvectors being calculated
+  set_rnd_vec_C2();
+
+  set_rnd_vec_C4();
+}
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+
+// function to initialize the vector of all necessary operators
+void GlobalData::set_Corr(){
+
+  const size_t nb_mom = get_number_of_momenta(); //momentum_squared.size();
+  const int max_mom_squared = number_of_max_mom;
+  const size_t nb_dir = number_of_dirac;
+  const size_t nb_dis = number_of_displ;
+
+  size_t i = 0;
+  size_t j = 0;
+  size_t p = 0;
+
+  // all three-momenta
+  for(int ipx = -max_mom_in_one_dir; ipx <= max_mom_in_one_dir; ++ipx){
+    for(int ipy = -max_mom_in_one_dir; ipy <= max_mom_in_one_dir; ++ipy){
+      for(int ipz = -max_mom_in_one_dir; ipz <= max_mom_in_one_dir; ++ipz){
+        if((ipx * ipx + ipy * ipy + ipz * ipz) > max_mom_squared) {
+          continue;
+        }
+        // all gamma structures
+        for(size_t dis = 0; dis < nb_dis; dis++){
+        for(size_t gam = 0; gam < nb_dir; gam++){
+
+          op_Corr[i].p3[0] = ipx;
+          op_Corr[i].p3[1] = ipy;
+          op_Corr[i].p3[2] = ipz;
+          op_Corr[i].dis3[0] = 0;
+          op_Corr[i].dis3[1] = 0;
+          op_Corr[i].dis3[2] = 0;
+          op_Corr[i].gamma[0] = 5;
+          op_Corr[i].gamma[1] = 4;
+          op_Corr[i].gamma[2] = 4;
+          op_Corr[i].gamma[3] = 4;
+  
+          op_Corr[i].id_rVdaggerVr = j;
+          if(p <= nb_mom/2)
+            op_Corr[i].id_VdaggerV = j;
+          else
+            op_Corr[i].id_VdaggerV = nb_mom-nb_dis*(j/nb_dis+1)+j%nb_dis;
+
+          if(gam == 0){
+            if(p > nb_mom/2){
+              op_rVdaggerVr.emplace_back(std::pair<size_t, size_t>
+                  (nb_mom-nb_dis*(j/nb_dis+1)+j%nb_dis, j));
+              op_Corr[i].flag_VdaggerV = -1;
+            }
+            else
+              op_Corr[i].flag_VdaggerV = 1;
+
+            if((p == nb_mom/2) & (dis == 0))
+              index_of_unity = j;
+            j++;
+          }
+          else
+            op_Corr[i].flag_VdaggerV = 0;
+
+          op_Corr[i].id = i;
+          i++;
+        }}
+      p++;
+      }
+    }
+  }
+
+  if(i != op_Corr.size()){
+    std::cout << "Error in LapH::set_Cor(): nb_op not equal to allocated "
+                 "number of operators" << std::endl;
+    exit(0);
+  } 
+
+}
+
+// function to obtain the index combinations in op for the 2pt-fct
+void GlobalData::set_C2(){
+
+  const size_t nb_mom_sq = number_of_momentum_squared;
+  const size_t nb_dg = dg.size();
+
+  size_t nb_op = op_Corr.size();
+  size_t j = 0;
+
+  // run over all momenta squared (back-to-back hardcoded) and gamma 
+  // combinations
+  for(size_t p_sq = 0; p_sq < nb_mom_sq; p_sq++){
+    for(size_t so = 0; so < nb_dg; so++){
+      for(size_t si = 0; si < nb_dg; si++){
+
+        // index for access of element
+        size_t i = p_sq * nb_dg*nb_dg + so * nb_dg + si;
+
+        // save p^2 and gamma structure at source and sink
+        op_C2[i].p_sq = p_sq;
+        op_C2[i].dg_so = so;
+        op_C2[i].dg_si = si;
+
+        // loop over op and set index pairs
+        for(auto& el : op_Corr)
+          if((el.p3[0]*el.p3[0] + el.p3[1]*el.p3[1] + el.p3[2]*el.p3[2]) == p_sq){ 
+            if(el.gamma[0] == dg[so]){
+              size_t id1 = el.id;
+              // thats the generalized version of nb_mom - p - 1 including 
+              // a faster running gamma structure
+              size_t id2 = nb_op - nb_dg * (id1/nb_dg + 1) + si;
+              // warning because array has no list-of-arrays constructor but 
+              // works. Can change this to pair structure.
+              op_C2[i].index.emplace_back(std::pair<size_t, size_t>(id1, id2));
+            }
+          }
+
+        j++;
+        
+      }
+    }
+  }
+
+  if(j != op_C2.size()){
+    std::cout << "Error in LapH::set_C2(): nb_op not equal to allocated "
+                 "number of operators" << std::endl;
+    exit(0);
+  } 
+
+}
+
+// function to obtain the index combinations in op for the 2pt-fct
+void GlobalData::set_C4(){
+
+  const size_t nb_mom_sq = number_of_momentum_squared;
+  const size_t nb_dg = dg.size();
+
+  size_t nb_op = op_Corr.size();
+  size_t i = 0;
+  size_t j = 0;
+
+  for(size_t so = 0; so < nb_dg; so++){
+  for(size_t si = 0; si < nb_dg; si++){
+
+    for(size_t p_sq_cm = 0; p_sq_cm < 1; p_sq_cm++){
+    // run over all momenta squared (back-to-back hardcoded) and gamma 
+    // combinations
+    for(size_t p_sq_1 = 0; p_sq_1 < nb_mom_sq; p_sq_1++){
+      size_t p_sq_2 = p_sq_1;
+//    for(size_t p_sq_2 = 0; p_sq_2 < nb_mom_sq; p_sq_2++){
+    for(size_t p_sq_3 = 0; p_sq_3 < nb_mom_sq; p_sq_3++){
+      size_t p_sq_4 = p_sq_3;
+//    for(size_t p_sq_4 = 0; p_sq_4 < nb_mom_sq; p_sq_4++){
+
+      // index for access of element
+//      size_t i = p_sq*nb_dg*nb_dg + so*nb_dg + si;
+
+//      //only diagonal elements
+//      size_t p_sq_so = p_sq_1;
+//      size_t p_sq_si = p_sq;
+
+
+      // loop over op and set index pairs
+      for(auto& el_1 : op_Corr){
+        if(el_1.gamma[0] == dg[so]){
+        if((el_1.p3[0]*el_1.p3[0] + el_1.p3[1]*el_1.p3[1] + 
+            el_1.p3[2]*el_1.p3[2]) == p_sq_1){ 
+
+        for(auto& el_2 : op_Corr){
+          if(el_2.gamma[0] == dg[so]){
+          if((el_2.p3[0]*el_2.p3[0] + el_2.p3[1]*el_2.p3[1] + 
+              el_2.p3[2]*el_2.p3[2]) == p_sq_2){ 
+
+          if((el_1.p3[0]+el_2.p3[0])*(el_1.p3[0]+el_2.p3[0]) + 
+             (el_1.p3[1]+el_2.p3[1])*(el_1.p3[1]+el_2.p3[1]) +
+             (el_1.p3[2]+el_2.p3[2])*(el_1.p3[2]+el_2.p3[2]) == p_sq_cm){
+
+
+          size_t id1 = el_1.id;
+          // thats the generalized version of nb_mom - p - 1 including 
+          // a faster running gamma structure
+//          size_t id2 = nb_op - nb_dg * (id1/nb_dg + 1) + so;
+          size_t id2 = el_2.id;
+
+
+          for(auto& el_3 : op_Corr){
+            if(el_3.gamma[0] == dg[si]){
+            if((el_3.p3[0]*el_3.p3[0] + el_3.p3[1]*el_3.p3[1] + 
+                el_3.p3[2]*el_3.p3[2]) == p_sq_3){ 
+    
+            for(auto& el_4 : op_Corr){
+              if(el_4.gamma[0] == dg[si]){
+              if((el_4.p3[0]*el_4.p3[0] + el_4.p3[1]*el_4.p3[1] + 
+                  el_4.p3[2]*el_4.p3[2]) == p_sq_4){ 
+    
+              if((el_3.p3[0]+el_4.p3[0])*(el_3.p3[0]+el_4.p3[0]) + 
+                 (el_3.p3[1]+el_4.p3[1])*(el_3.p3[1]+el_4.p3[1]) +
+                 (el_3.p3[2]+el_4.p3[2])*(el_3.p3[2]+el_4.p3[2]) == p_sq_cm){
+    
+    
+              size_t id3 = el_3.id;
+              // thats the generalized version of nb_mom - p - 1 including 
+              // a faster running gamma structure
+    //          size_t id2 = nb_op - nb_dg * (id1/nb_dg + 1) + so;
+              size_t id4 = el_4.id;
+
+//          for(auto& el_si : op_Corr)
+//            if((el_si.p3[0]*el_si.p3[0] + el_si.p3[1]*el_si.p3[1] + 
+//                el_si.p3[2]*el_si.p3[2]) == p_sq_si){ 
+//            if(el_si.gamma[0] == dg[si]){
+//              size_t id3 = el_si.id;
+//              size_t id4 = nb_op - nb_dg * (id3/nb_dg + 1) + si;
+
+              // save p^2 and gamma structure at source and sink
+              op_C4[i].p_sq_cm = p_sq_cm;
+              op_C4[i].p_sq_so_1 = p_sq_1;
+              op_C4[i].p_sq_so_2 = p_sq_2;
+              op_C4[i].p_sq_si_1 = p_sq_3;
+              op_C4[i].p_sq_si_2 = p_sq_4;
+              op_C4[i].dg_so = so;
+              op_C4[i].dg_si = si;
+
+              op_C4[i].index.emplace_back(
+                  std::array<size_t, 4>{{id1, id2, id3, id4}});
+
+            }// if over p_sq_cm
+            }}}//loops over particle 4
+          }}}//loops over particle 3
+        }// if over p_sq_cm
+        }}}//loops over particle 2
+      }}}//loops over particle 1
+
+      //TODO: there are empty op_C4[i] like this
+      i++;
+      j++;
+      
+    }}//loops over displ-gamma
+//  }}
+  }}}//loop over mom_sq
+
+//  if(j != op_C4.size()){
+//    std::cout << "Error in LapH::set_C4(): nb_op not equal to allocated "
+//                 "number of operators" << std::endl;
+//    exit(0);
+//  } 
+
+}
+
+
+// function to obtain the index combinations of the randomvectors for two quarks
+void GlobalData::set_rnd_vec_C2() {
+  // ATM hardcoded, check which quarks are being used
+  const int q1 = 0, q2 = 0;
+  const int rndq1 = quarks[q1].number_of_rnd_vec;
+  const int rndq2 = quarks[q2].number_of_rnd_vec;
+
+  if(q1==q2) { // same quarks, so use only combinations that are not equal
+    if(rndq1 < 2) {
+      std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+      exit(-1);
+    }
+    for(size_t i = 0; i < rndq1; ++i) {
+      for(size_t j = 0; j < rndq1; ++j) {
+        if(i != j) {
+          rnd_vec_C2.emplace_back(i, j);
+        }
+      }
+    }
+  } else { // different quarks, use all combinations
+    for(size_t i = 0; i < rndq1; ++i) {
+      for(size_t j = 0; j < rndq2; ++j) {
+        rnd_vec_C2.emplace_back(i, j);
+      }
+    }
+  }
+
+//  std::cout << "rnd_vec test: " << rnd_vec_C2.size() << std::endl;
+//  for(auto& r : rnd_vec_C2) {
+//    std::cout << r.first << " " << r.second << std::endl;
+//  }
+}
+
+// function to obtain index combinations of the randomvectors for four quarks
+void GlobalData::set_rnd_vec_C4() {
+  // ATM hardcoded, check which quarks are being used
+  const int q1 = 0, q2 = 0, q3 = 0, q4 = 0;
+  const int rndq1 = quarks[q1].number_of_rnd_vec;
+  const int rndq2 = quarks[q2].number_of_rnd_vec;
+  const int rndq3 = quarks[q3].number_of_rnd_vec;
+  const int rndq4 = quarks[q4].number_of_rnd_vec;
+
+  if(q1==q2) { // q1-2 same
+    if(q1==q3) { // q1-3 same
+      if(q1==q4) { // q1-4 same
+        if(rndq1 < 4) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq1; ++rnd2) {
+            if(rnd2 != rnd1) {
+              for(size_t rnd3 = 0; rnd3 < rndq1; ++rnd3) {
+                if( (rnd3 != rnd1) && (rnd3 != rnd2) ) {
+                  for(size_t rnd4 = 0; rnd4 < rndq1; ++rnd4) {
+                    if( (rnd4 != rnd1) && (rnd4 != rnd2) && (rnd4 != rnd3) ) {
+                      rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else { // q1-3 same; q4 different
+        if(rndq1 < 3) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq1; ++rnd2) {
+            if(rnd2 != rnd1) {
+              for(size_t rnd3 = 0; rnd3 < rndq1; ++rnd3) {
+                if( (rnd3 != rnd1) && (rnd3 != rnd2) ) {
+                  for(size_t rnd4 = 0; rnd4 < rndq4; ++rnd4) {
+                    rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                  }
+                }
+              }
+            }
+          }
+        }
+      } // check q4
+    } else { //q1-2 same; q3 different
+      if(q1==q4) { //q1-2,4 same; q3 different
+        if(rndq1 < 3) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq1; ++rnd2) {
+            if(rnd2 != rnd1) {
+              for(size_t rnd3 = 0; rnd3 < rndq3; ++rnd3) {
+                for(size_t rnd4 = 0; rnd4 < rndq1; ++rnd4) {
+                  if( (rnd4 != rnd1) && (rnd4 != rnd2) ) {
+                    rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else if (q3==q4) { //q1-2 same; q3-4 same
+        if( (rndq1 < 2) || (rndq3 < 2) ) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq1; ++rnd2) {
+            if(rnd2 != rnd1) {
+              for(size_t rnd3 = 0; rnd3 < rndq3; ++rnd3) {
+                for(size_t rnd4 = 0; rnd4 < rndq3; ++rnd4) {
+                  if(rnd4 != rnd3) {
+                    rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else { //q1-2 same; q3 different; q4 different
+        if(rndq1 < 2) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq1; ++rnd2) {
+            if(rnd2 != rnd1) {
+              for(size_t rnd3 = 0; rnd3 < rndq3; ++rnd3) {
+                for(size_t rnd4 = 0; rnd4 < rndq4; ++rnd4) {
+                  rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                }
+              }
+            }
+          }
+        }
+      } // check q4
+    } // check q3
+  } else { // q1 different; q2 different
+    if(q1==q3) { //q1,3 same; q2 different
+      if(q1==q4) { //q1,3-4 same; q2 different
+        if(rndq1 < 3) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq1; ++rnd3) {
+              if(rnd3 != rnd1) {
+                for(size_t rnd4 = 0; rnd4 < rndq1; ++rnd4) {
+                  if( (rnd4 != rnd1) && (rnd4 != rnd3) ) {
+                    rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else if(q2==q4) { //q1,3 same; q2,4 same
+        if( (rndq1 < 2) || (rndq2 < 2) ) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq1; ++rnd3) {
+              if(rnd3 != rnd1) {
+                for(size_t rnd4 = 0; rnd4 < rndq2; ++rnd4) {
+                  if(rnd4 != rnd2) {
+                    rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else { //q1,3 same; q2 different; q4 different
+        if(rndq1 < 2) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq1; ++rnd3) {
+              if(rnd3 != rnd1) {
+                for(size_t rnd4 = 0; rnd4 < rndq4; ++rnd4) {
+                  rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                }
+              }
+            }
+          }
+        }
+      } // check q4
+    } else if(q2==q3) { //q1 different; q2-3 same
+      if(q1==q4) { //q1,4 same; q2-3 same
+        if( (rndq1 < 2)  || (rndq2 < 2) ) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq2; ++rnd3) {
+              if(rnd3 != rnd2) {
+                for(size_t rnd4 = 0; rnd4 < rndq1; ++rnd4) {
+                  if(rnd4 != rnd1) {
+                    rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else if(q2==q4) { //q1 different; q2-4 same
+        if(rndq2 < 3) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq2; ++rnd3) {
+              if(rnd3 != rnd2) {
+                for(size_t rnd4 = 0; rnd4 < rndq2; ++rnd4) {
+                  if( (rnd4 != rnd2) && (rnd4 != rnd3) ) {
+                    rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else { //q1 different; q2-3 same; q4 different
+        if(rndq2 < 2) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq2; ++rnd3) {
+              if(rnd3 != rnd2) {
+                for(size_t rnd4 = 0; rnd4 < rndq4; ++rnd4) {
+                  rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                }
+              }
+            }
+          }
+        }
+      } // check q4
+    } else { //q1 different; q2 different; q3 different
+      if(q1==q4) { //q1,4 same; q2 different; q3 different
+        if(rndq1 < 2) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq3; ++rnd3) {
+              for(size_t rnd4 = 0; rnd4 < rndq1; ++rnd4) {
+                if(rnd4 != rnd1) {
+                  rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                }
+              }
+            }
+          }
+        }
+      } else if(q2==q4) { //q1 different; q2,4 same; q3 different
+        if(rndq2 < 2) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq3; ++rnd3) {
+              for(size_t rnd4 = 0; rnd4 < rndq2; ++rnd4) {
+                if(rnd4 != rnd2) {
+                  rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                }
+              }
+            }
+          }
+        }
+      } else if(q3==q4) { //q1 different; q2 different; q3-4 same
+        if(rndq3 < 2) {
+          std::cerr << "not enough randomvectors for 4point functions" << std::endl;
+          exit(-1);
+        }
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq3; ++rnd3) {
+              for(size_t rnd4 = 0; rnd4 < rndq3; ++rnd4) {
+                if(rnd4 != rnd3) {
+                  rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+                }
+              }
+            }
+          }
+        }
+      } else { //q1 different; q2 different; q3 different; q4 different
+        for(size_t rnd1 = 0; rnd1 < rndq1; ++rnd1) {
+          for(size_t rnd2 = 0; rnd2 < rndq2; ++rnd2) {
+            for(size_t rnd3 = 0; rnd3 < rndq3; ++rnd3) {
+              for(size_t rnd4 = 0; rnd4 < rndq4; ++rnd4) {
+                rnd_vec_C4.emplace_back(std::array<size_t, 4> {{rnd1, rnd2, rnd3, rnd4}});
+              }
+            }
+          }
+        }
+      } // check q4
+    } // check q3
+  } // check q2
+
+//  std::cout << "rnd_vec test: " << rnd_vec_C4.size() << std::endl;
+//  for(auto& r : rnd_vec_C4) {
+//    std::cout << r[0] << " " << r[1] << " " << r[2] << " " << r[3] << std::endl;
+//  }
+}
+
 // *****************************************************************************
 // simplifies and cleans read_parameters function
 static void lattice_input_data_handling (const std::string path_output,
@@ -515,6 +1115,21 @@ void GlobalData::read_parameters (int ac, char* av[]) {
     //for memory requirement of complex numbers
     V_TS = dim_row * 4 * 3 * 2;
     V_for_lime = V_TS * Lt;
+
+    //dirac structure hard coded
+    dg.push_back(5);
+
+    //displacement not supported yet
+    number_of_displ_gamma = dg.size();
+    number_of_displ = 1;
+    number_of_dirac = dg.size();
+    number_of_VdaggerV = (momentum_squared.size()/2+1)*number_of_displ;
+    number_of_rVdaggerVr = momentum_squared.size()*number_of_displ;
+    number_of_operators = momentum_squared.size() * number_of_displ_gamma;
+    number_of_momentum_squared = number_of_max_mom + 1;
+
+    init_from_infile();
+
   }
   catch(std::exception& e){
     std::cout << e.what() << "\n";

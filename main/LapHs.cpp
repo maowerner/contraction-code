@@ -39,5 +39,6 @@ int main (int ac, char* av[]) {
     std::cout << "\nprocessing configuration: " << config_i << "\n\n";
     corr.compute_correlators(config_i);
   }
+
 }
 

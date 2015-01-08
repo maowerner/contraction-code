@@ -6,6 +6,7 @@ static GlobalData * const global_data = GlobalData::Instance();
 LapH::CrossOperator::CrossOperator(const size_t number) : X(number) {
 
   const size_t nb_mom = global_data->get_number_of_momenta();
+  const size_t nb_op = nb_mom;                                                //!!!!
   const std::vector<quark> quarks = global_data->get_quarks();
   const size_t nb_rnd = quarks[0].number_of_rnd_vec;
   const size_t dilE = quarks[0].number_of_dilution_E;
@@ -15,8 +16,7 @@ LapH::CrossOperator::CrossOperator(const size_t number) : X(number) {
   // TODO: }
 
   for(auto& xx : X){
-    xx.resize(boost::extents[nb_mom][nb_mom][nb_dir][nb_dir]
-                            [nb_rnd][nb_rnd][nb_rnd]);
+    xx.resize(boost::extents[nb_op][nb_op][nb_rnd][nb_rnd][nb_rnd]);
 
     std::fill(xx.data(), xx.data() + xx.num_elements(), 
                 Eigen::MatrixXcd(4 * dilE, 4 * dilE));
@@ -31,17 +31,14 @@ void LapH::CrossOperator::construct(const BasicOperator& basic,
                                     const size_t type){
 
   const int Lt = global_data->get_Lt();
-  const size_t nb_mom = global_data->get_number_of_momenta();
   const std::vector<quark> quarks = global_data->get_quarks();
   const size_t nb_rnd = quarks[0].number_of_rnd_vec;
   const size_t dilE = quarks[0].number_of_dilution_E;
   const size_t dilT = quarks[0].number_of_dilution_T;
+  const vec_pdg_C4 op_C4 = global_data->get_op_C4();
   // TODO: must be changed in GlobalData {
-  std::vector<int> dirac_ind {5};
-  const size_t nb_dir = dirac_ind.size();
   // TODO: }
 
-  const std::array<double, 4> bla = {{1., 1., -1., -1.}};
   size_t tu, td, t2;
   if(type == 0){
     tu = (t_sink/dilT);
@@ -61,64 +58,83 @@ void LapH::CrossOperator::construct(const BasicOperator& basic,
     t2 = t_sink;
   }
 
-  for(size_t p_so = 0; p_so < nb_mom; p_so++){
-  for(size_t p_si = 0; p_si < nb_mom; p_si++){
-    for(size_t d_so = 0; d_so < nb_dir; d_so++){
-    for(size_t d_si = 0; d_si < nb_dir; d_si++){
-      #pragma omp parallel for collapse(2) schedule(dynamic)
-      for(size_t rnd1 = 0; rnd1 < nb_rnd; ++rnd1){
-      for(size_t rnd2 = 0; rnd2 < nb_rnd; ++rnd2){
-      if(rnd2 != rnd1){
-      for(size_t rnd3 = 0; rnd3 < nb_rnd; ++rnd3){
-      if((rnd3 != rnd1) && (rnd3 != rnd2)){
-        for(size_t col = 0; col < 4; col++){
-        for(size_t row = 0; row < 4; row++){
+#pragma omp parallel
+{     
+  for(const auto& op : op_C4){
+  for(const auto& i : op.index){
+    size_t id_so = i[2+nb];
+    size_t id_si = i[1-nb];
 
-            X[nb][p_so][p_si][d_so][d_si][rnd1][rnd2][rnd3]
-                                    .block(row*dilE, col*dilE, dilE, dilE) = 
+    #pragma omp for collapse(2) schedule(dynamic)
+    for(size_t rnd1 = 0; rnd1 < nb_rnd; ++rnd1){
+    for(size_t rnd2 = 0; rnd2 < nb_rnd; ++rnd2){
+    if(rnd2 != rnd1){
+    for(size_t rnd3 = 0; rnd3 < nb_rnd; ++rnd3){
+    if((rnd3 != rnd1) && (rnd3 != rnd2)){
 
-            bla[col] * //TODO: Dirac by hand is not good! 
+      compute_X(basic, id_si, 
+                basic.get_operator(t_source, tu, td, id_so, rnd1, rnd2),
+                vdaggerv.return_rvdaggervr(id_si, t2, rnd2, rnd3),
+                X[nb][id_so][id_si][rnd1][rnd2][rnd3]);
 
-            basic.get_operator(t_source, tu, td, d_so, p_so, rnd1, rnd2)
-                      .block(row*dilE, col*dilE, dilE, dilE) *
+//      compute_X(basic, vdaggerv, id_so, id_si, rnd1, rnd2, rnd3, t_source, tu, 
+//          td, t2, X[nb]);
 
-            vdaggerv.return_rvdaggervr(p_si, t2, d_si, rnd2, rnd3)
-                      .block(0, col*dilE, dilE, dilE);
-
-        }}// loops over col and row end here
-      }}}}}// loops random vectors
-    }}// loops dirac indices
-  }}// loops momenta
+    }}}}}// loops random vectors
+  }}// loops operators
 }
+
+}
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+void LapH::CrossOperator::compute_X(const BasicOperator& basic, 
+                                    const size_t id_si, 
+                                    const Eigen::MatrixXcd& Q2, 
+                                    const Eigen::MatrixXcd& VdaggerV,
+                                    Eigen::MatrixXcd& X) {
+
+  const std::vector<quark> quarks = global_data->get_quarks();
+  const size_t dilE = quarks[0].number_of_dilution_E;
+
+  for(size_t block = 0; block < 4; block++){
+
+    cmplx value = 1;
+    basic.value_dirac(id_si, block, value);
+
+    X.block(0, block*dilE, 4*dilE, dilE) = 
+      value * Q2.block(0, block*dilE, 4*dilE, dilE) * 
+      VdaggerV.block(0, basic.order_dirac(id_si, block)*dilE, dilE, dilE);
+
+    }// loop block ends here
+
+}
+
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
 void LapH::CrossOperator::swap(const size_t nb1, const size_t nb2){
   
-  const size_t nb_mom = global_data->get_number_of_momenta();
   const std::vector<quark> quarks = global_data->get_quarks();
   const size_t nb_rnd = quarks[0].number_of_rnd_vec;
-  const size_t dilE = quarks[0].number_of_dilution_E;
-  // TODO: must be changed in GlobalData {
-  std::vector<int> dirac_ind {5};
-  const size_t nb_dir = dirac_ind.size();
+  const vec_pdg_Corr op_Corr = global_data->get_op_Corr();
   // TODO: }
   // TODO: Think about for each loop
-  #pragma omp parallel for collapse(6) schedule(dynamic)
-  for(size_t p_so = 0; p_so < nb_mom; p_so++){
-  for(size_t p_si = 0; p_si < nb_mom; p_si++){
-    for(size_t d_so = 0; d_so < nb_dir; d_so++){
-    for(size_t d_si = 0; d_si < nb_dir; d_si++){
-      for(size_t rnd1 = 0; rnd1 < nb_rnd; ++rnd1){
-      for(size_t rnd2 = 0; rnd2 < nb_rnd; ++rnd2){
-      if(rnd2 != rnd1){
-      for(size_t rnd3 = 0; rnd3 < nb_rnd; ++rnd3){
-      if((rnd3 != rnd1) && (rnd3 != rnd2)){
 
-        X[nb1][p_so][p_si][d_so][d_si][rnd1][rnd2][rnd3].swap(
-        X[nb2][p_so][p_si][d_so][d_si][rnd1][rnd2][rnd3]);
+  // can one collapse autoloops?
+  for(auto& op_so : op_Corr){
+  for(auto& op_si : op_Corr){
+    #pragma omp parallel for collapse(2) schedule(dynamic)
+    for(size_t rnd1 = 0; rnd1 < nb_rnd; ++rnd1){
+    for(size_t rnd2 = 0; rnd2 < nb_rnd; ++rnd2){
+    if(rnd2 != rnd1){
+    for(size_t rnd3 = 0; rnd3 < nb_rnd; ++rnd3){
+    if((rnd3 != rnd1) && (rnd3 != rnd2)){
 
-      }}}}}// loops random vectors
-    }}// loops dirac indices
-  }}// loops momenta
+      X[nb1][op_so.id][op_si.id][rnd1][rnd2][rnd3].swap(
+      X[nb2][op_so.id][op_si.id][rnd1][rnd2][rnd3]);
+
+    }}}}}// loops random vectors
+  }}//loops operators
 }

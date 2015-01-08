@@ -6,82 +6,78 @@ static GlobalData * const global_data = GlobalData::Instance();
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X,
-                                                      const int t_source, 
-                                                      const int t_sink){
+//TODO: Call that build_C4_3() ?
+void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
+
   const int Lt = global_data->get_Lt();
-  const int t_source_1 = (t_source + 1) % Lt;
-  const int t_sink_1 = (t_sink + 1) % Lt;
-  const size_t nb_mom = global_data->get_number_of_momenta();
-  const int max_mom_squared = global_data->get_number_of_max_mom();
-  const std::vector<int> mom_squared = global_data->get_momentum_squared();
-  const std::vector<quark> quarks = global_data->get_quarks();
-  const size_t nb_rnd = quarks[0].number_of_rnd_vec;
+  const vec_pdg_C4 op_C4 = global_data->get_op_C4();
+  const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_C4();
   // TODO: must be changed in GlobalData {
-  int displ_min = global_data->get_displ_min();
-  int displ_max = global_data->get_displ_max();
-  const size_t nb_dis = displ_max - displ_min + 1;
-  std::vector<int> dirac_ind {5};
-  const size_t nb_dir = dirac_ind.size();
   // TODO: }
 
-  if(t_source != 0){
-    X.swap(0, 1);
-    if(t_source%2 == 0)
-      X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
-    else
-      X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 0);
-  }
-  else{
-    X.construct(basic, vdaggerv, 0, t_source,   t_sink, 0);
-    X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
-  }
-  if(t_source == t_sink)
-    return;
+  std::cout << "\n\tcomputing the traces of 2 pi_+/-:\r";
+  clock_t time = clock();
+  for(int t_sink = 0; t_sink < Lt; ++t_sink){
+    std::cout << "\tcomputing the traces of 2 pi_+/-: " 
+        << std::setprecision(2) << (float) t_sink/Lt*100 << "%\r" 
+        << std::flush;
+    int t_sink_1 = (t_sink + 1) % Lt;
+    for(int t_source = 0; t_source < Lt; ++t_source){
+      const int t_source_1 = (t_source + 1) % Lt;
 
-  for(size_t dirac_1 = 0; dirac_1 < nb_dir; ++dirac_1){     
-    for(size_t p = 0; p <= max_mom_squared; p++){
-    for(size_t p_u = 0; p_u < nb_mom; ++p_u) {
-    if(mom_squared[p_u] == p){
-        for(size_t dirac_2 = 0; dirac_2 < nb_dir; ++dirac_2){
-        for(size_t p_d = 0; p_d < nb_mom; ++p_d) {
-        if(mom_squared[p_d] == p){
-          // complete diagramm. combine X and Y to four-trace
-          // C4_mes = tr(D_u^-1(t_source     | t_sink      ) Gamma 
-          //             D_d^-1(t_sink       | t_source + 1) Gamma 
-          //             D_u^-1(t_source + 1 | t_sink + 1  ) Gamma 
-          //             D_d^-1(t_sink + 1   | t_source    ) Gamma)
-          #pragma omp parallel
-          {
-            cmplx priv_C4(0.0,0.0);
-            #pragma omp for collapse(2) schedule(dynamic)
-            for(size_t rnd1 = 0; rnd1 < nb_rnd; ++rnd1){
-            for(size_t rnd2 = 0; rnd2 < nb_rnd; ++rnd2){      
-            if(rnd2 != rnd1){
-            for(size_t rnd3 = 0; rnd3 < nb_rnd; ++rnd3){
-            if((rnd3 != rnd2) && (rnd3 != rnd1)){
-            for(size_t rnd4 = 0; rnd4 < nb_rnd; ++rnd4){
-            if((rnd4 != rnd1) && (rnd4 != rnd2) && (rnd4 != rnd3)){
-              if(t_source%2 == 0)
-                priv_C4 += (X(0, p_d, p_u, dirac_1, dirac_2, rnd3, rnd2, rnd4) *
-                            X(1, nb_mom - p_d - 1, nb_mom - p_u - 1,
-                              dirac_1, dirac_2, rnd4, rnd1, rnd3)).trace();
-              else
-                priv_C4 += std::conj(
-                           (X(0, p_d, p_u, dirac_1, dirac_2, rnd3, rnd2, rnd4) *
-                            X(1, nb_mom - p_d - 1, nb_mom - p_u - 1,
-                              dirac_1, dirac_2, rnd4, rnd1, rnd3)).trace());
-            }}}}}}}
-            #pragma omp critical
-            {
-              C4_mes[p][p][dirac_1][dirac_2]
-                  [abs((t_sink - t_source) - Lt) % Lt] += priv_C4;
+      if(t_source != 0){
+        if(t_source%2 == 0){
+          X.swap(1, 0);
+          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
+        }
+        else{
+          X.swap(0, 1);
+          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 0);
+        }
+      }
+      else{
+        X.construct(basic, vdaggerv, 0, t_source,   t_sink, 0);
+        X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
+      }
+      if(t_source == t_sink)
+        continue;
+    
+      #pragma omp parallel
+      #pragma omp single
+      {
+      for(const auto& op : op_C4){
+      for(const auto& i : op.index){
+        // complete diagramm. combine X and Y to four-trace
+        // C4_mes = tr(D_u^-1(t_source     | t_sink      ) Gamma 
+        //             D_d^-1(t_sink       | t_source + 1) Gamma 
+        //             D_u^-1(t_source + 1 | t_sink + 1  ) Gamma 
+        //             D_d^-1(t_sink + 1   | t_source    ) Gamma)
+          cmplx priv_C4(0.0,0.0);
+          for(const auto& rnd_it : rnd_vec_index) {
+            #pragma omp task shared(rnd_it, i)
+            if(t_source%2 == 0)
+              priv_C4 += (X(0, i[2], i[1], rnd_it[2], rnd_it[1], rnd_it[3]) *
+                          X(1, i[3], i[0], rnd_it[3], rnd_it[0], rnd_it[2])).trace();
+            else
+              priv_C4 += std::conj(
+                         (X(0, i[2], i[1], rnd_it[2], rnd_it[1], rnd_it[3]) *
+                          X(1, i[3], i[0], rnd_it[3], rnd_it[0], rnd_it[2])).trace());
             }
+          #pragma omp critical
+          {
+            C4_mes[op.p_sq_cm][op.p_sq_so_1][op.p_sq_si_1][op.dg_so][op.dg_si]
+                [abs((t_sink - t_source) - Lt) % Lt] += priv_C4;
           }
-        }}// loop and if condition p_d
-      }// loop dirac_2
-    }}}// loop and if conditions p_u
-  }// loop dirac_1
+      }}//loops operators
+      } // end parallel region
+    }// loop t_source
+  }// loop t_sink
+
+  std::cout << "\tcomputing the traces of 2 pi_+/-: " << "100.00%" << std::endl;
+  time = clock() - time;
+  std::cout << "\t\tSUCCESS - " << ((float) time)/CLOCKS_PER_SEC 
+            << " seconds" << std::endl;
+
 }
 /******************************************************************************/
 /******************************************************************************/
@@ -94,13 +90,12 @@ void LapH::Correlators::write_C4_3(const size_t config_i){
       global_data->get_name_lattice();
 
   const int Lt = global_data->get_Lt();
-  const int max_mom_squared = global_data->get_number_of_max_mom();
+  const size_t nb_mom_sq = global_data->get_number_of_momentum_squared();
   const std::vector<int> dirac_ind {5};
   const size_t nb_dir = dirac_ind.size();
 
-  const std::vector<quark> quarks = global_data->get_quarks();
-  const size_t nb_rnd = quarks[0].number_of_rnd_vec;
-  const size_t norm1 = Lt*nb_rnd*(nb_rnd-1)*(nb_rnd-2);
+  const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_C4();
+  const size_t norm1 = Lt*rnd_vec_index.size();
 
   // normalisation
   for(auto i = C4_mes.data(); i < (C4_mes.data()+C4_mes.num_elements()); i++)
@@ -109,21 +104,20 @@ void LapH::Correlators::write_C4_3(const size_t config_i){
   // output to binary file
   for(size_t dirac_1 = 0; dirac_1 < nb_dir; ++dirac_1){     
   for(size_t dirac_2 = 0; dirac_2 < nb_dir; ++dirac_2){
-    for(size_t p = 0; p <= max_mom_squared; p++){
+    for(size_t p = 0; p < nb_mom_sq; p++){
       sprintf(outfile, 
           "%s/dirac_%02d_%02d_p_%01d_%01d_displ_%01d_%01d/"
           "C4_3_conf%04d.dat", 
           outpath.c_str(), dirac_ind.at(dirac_1), dirac_ind.at(dirac_2), 
           (int)p, (int)p, 0, 0, (int)config_i);
+//      std::cout << outfile << std::endl;
       if((fp = fopen(outfile, "wb")) == NULL)
         std::cout << "fail to open outputfile" << std::endl;
-      fwrite((double*) &(C4_mes[p][p][dirac_1][dirac_2][0]), 
+      fwrite((double*) &(C4_mes[0][p][p][dirac_1][dirac_2][0]), 
              sizeof(double), 2 * Lt, fp);
       fclose(fp);
     }// loop p
   }}// loops dirac_1 dirac_2
 
 }
-
-
 
