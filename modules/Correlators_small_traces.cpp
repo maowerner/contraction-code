@@ -8,7 +8,7 @@ static GlobalData * const global_data = GlobalData::Instance();
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void LapH::Correlators::build_Corr(){
+void LapH::Correlators::build_Q2_trace(){
 
   const size_t Lt = global_data->get_Lt();
   const std::vector<quark> quarks = global_data->get_quarks();
@@ -52,8 +52,75 @@ void LapH::Correlators::build_Corr(){
             (t_source, t_sink/dilT, 1, id_Q2, rnd_it.first, rnd_it.second),
             vdaggerv.return_rvdaggervr(op_Corr[id_Corr].id_rvdvr, t_sink, 
                 rnd_it.second, rnd_it.first),
-            Corr[id_Q2][id_Corr][t_source][t_sink]
+            Q2_trace[id_Q2][id_Corr][t_source][t_sink]
                 [rnd_it.first][rnd_it.second]);
+
+        } // Loop over random vectors ends here! 
+//      #pragma omp taskwait
+      }//Loops over all Quantum numbers 
+    
+      // Using the dagger operation to get all possible random vector combinations
+      // TODO: Think about imaginary correlations functions - There might be an 
+      //       additional minus sign involved
+    } // end parallel region
+    
+    }// Loops over t_source
+  }// Loops over t_sink
+
+  std::cout << "\tcomputing the traces of pi_+/-: " << "100.00%" << std::endl;
+  time = clock() - time;
+  std::cout << "\t\tSUCCESS - " << ((float) time)/CLOCKS_PER_SEC 
+            << " seconds" << std::endl;
+
+}
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+void LapH::Correlators::build_Q2_trace_uncharged(){
+
+  const size_t Lt = global_data->get_Lt();
+  const std::vector<quark> quarks = global_data->get_quarks();
+  const int dilT = quarks[0].number_of_dilution_T;
+
+  const vec_index_2pt op_C2 = global_data->get_lookup_2pt_trace();
+  const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
+  const indexlist_2 rnd_vec_index = global_data->get_rnd_vec_2pt();
+
+  std::cout << "\n\tcomputing the traces of pi_+/-:\r";
+  clock_t time = clock();
+  for(int t_sink = 0; t_sink < Lt; ++t_sink){
+    std::cout << "\tcomputing the traces of pi_+/-: " 
+        << std::setprecision(2) << (float) t_sink/Lt*100 << "%\r" 
+        << std::flush;
+    int t_sink_1 = (t_sink + 1) % Lt;
+    for(int t_source = 0; t_source < Lt; ++t_source){
+
+    // CJ: OMP cannot do the parallelization over an auto loop,
+    //     implementing a workaround by hand
+    //     not used at the moment, increases runtime by a factor of 2
+    #pragma omp parallel
+    #pragma omp single
+    {
+      for(const auto& op : op_C2){
+
+        size_t id_Q2 = op.index_Q2;
+        size_t id_Corr = op.index_Corr;
+
+      #pragma omp task shared(op)
+        // TODO: A collpase of both random vectors might be better but
+        //       must be done by hand because rnd2 starts from rnd1+1
+        for(const auto& rnd_it : rnd_vec_index) {
+          // build all 2pt traces leading to C2_mes
+          // Corr = tr(D_d^-1(t_sink) Gamma D_u^-1(t_source) Gamma)
+          // TODO: Just a workaround
+          
+          Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd_it.first]
+              [rnd_it.second] =
+            (basic.get_operator_uncharged(t_source, t_sink/dilT, id_Q2, 
+              rnd_it.first, rnd_it.second) * 
+            basic.get_operator_uncharged(t_sink, t_source/dilT, id_Corr, 
+              rnd_it.first, rnd_it.second)).trace();
 
         } // Loop over random vectors ends here! 
 //      #pragma omp taskwait
@@ -84,7 +151,7 @@ void LapH::Correlators::build_Corr(){
 void LapH::Correlators::compute_meson_small_traces(const size_t id_si, 
                                              const Eigen::MatrixXcd& Q2,
                                              const Eigen::MatrixXcd& rVdaggerVr,
-                                             cmplx& Corr) {
+                                             cmplx& Q2_trace) {
 
   const std::vector<quark> quarks = global_data->get_quarks();
   const size_t dilE = quarks[0].number_of_dilution_E;
@@ -94,7 +161,7 @@ void LapH::Correlators::compute_meson_small_traces(const size_t id_si,
     cmplx value = 1;
     basic.value_dirac(id_si, block, value);
 
-    Corr += value * (Q2.block(block*dilE, block*dilE, dilE, dilE) *
+    Q2_trace += value * (Q2.block(block*dilE, block*dilE, dilE, dilE) *
             rVdaggerVr.block(0, (basic.order_dirac(id_si, block)*dilE), 
             dilE, dilE)).trace();
     }
@@ -145,7 +212,7 @@ void LapH::Correlators::build_and_write_2pt(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C2_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] += 
-           Corr[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
+           Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
       } //Loop over random vectors
     }}//Loops over all Quantum numbers
   }}//Loops over time
@@ -217,8 +284,8 @@ void LapH::Correlators::build_and_write_C4_1(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C4_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] +=
-          (Corr[id_Q2_0][id_Corr_0][t_source_1][t_sink_1][rnd[0]][rnd[2]]) *
-          (Corr[id_Q2_1][id_Corr_1][t_source][t_sink][rnd[1]][rnd[3]]);
+          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink_1][rnd[0]][rnd[2]]) *
+          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink][rnd[1]][rnd[3]]);
       } // loop over random vectors
     }}//loops operators
   }}// loops t_sink and t_source
@@ -284,8 +351,8 @@ void LapH::Correlators::build_and_write_C4_2(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C4_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] +=
-          (Corr[id_Q2_0][id_Corr_0][t_source_1][t_sink][rnd[0]][rnd[2]]) *
-          (Corr[id_Q2_1][id_Corr_1][t_source][t_sink_1][rnd[1]][rnd[3]]);
+          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink][rnd[0]][rnd[2]]) *
+          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink_1][rnd[1]][rnd[3]]);
       } // loop over random vectors
     }}//loops operators
   }}// loops t_source and t_sink

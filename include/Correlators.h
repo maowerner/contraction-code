@@ -37,7 +37,8 @@ private:
   LapH::VdaggerV vdaggerv;
   array_cd_d2 C4_mes;
   array_cd_d2 C2_mes;
-  array_cd_d6 Corr;
+  array_cd_d6 Q2_trace;
+  array_cd_d6 Q2_trace_uncharged;
 
   void set_corr(const size_t config){
     read_rnd_vectors_from_file(config);
@@ -49,10 +50,11 @@ private:
   void compute_meson_small_traces(const size_t id_si, 
                                   const Eigen::MatrixXcd& Q2,
                                   const Eigen::MatrixXcd& rVdaggerVr, 
-                                  cmplx& Corr);
+                                  cmplx& Q2_trace);
   void compute_meson_4pt_cross_trace(LapH::CrossOperator& X);
 
-  void build_Corr();
+  void build_Q2_trace();
+  void build_Q2_trace_uncharged();
   void build_and_write_2pt(const size_t config_i);
   void write_C4_3(const size_t config_i);
   void build_and_write_C4_1(const size_t config_i);

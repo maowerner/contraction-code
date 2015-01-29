@@ -244,10 +244,16 @@ BasicOperator::BasicOperator() : gamma(), Q2() {
 
   Q2.resize(boost::extents[Lt][Lt/dilT][3][nb_op][nb_rnd][nb_rnd]);
   std::fill(Q2.data(), Q2.data() + Q2.num_elements(), 
-                    Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
+            Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
+
+  Q1_uncharged.resize(boost::extents[Lt][Lt/dilT][nb_op][nb_rnd][nb_rnd]);
+  std::fill(Q1_uncharged.data(), Q1_uncharged.data() + 
+            Q1_uncharged.num_elements(), 
+            Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
 
   std::cout << "\tallocated memory in BasicOperator" << std::endl;
 }
+
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
@@ -347,6 +353,75 @@ void BasicOperator::init_operator(const char dilution,
   }// pragma omp ends
 
   std::cout << "\tcomputing double quarkline: 100.00%" << std::endl;
+  time = clock() - time;
+  std::cout << "\t\tSUCCESS - " << ((float) time) / CLOCKS_PER_SEC 
+            << " seconds" << std::endl;
+}
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+void BasicOperator::init_operator_uncharged(const char dilution,
+                                  const LapH::VdaggerV& vdaggerv, 
+                                  const LapH::Perambulator& peram){
+
+  const int Lt = global_data->get_Lt();
+  const size_t nb_ev = global_data->get_number_of_eigen_vec();
+  const std::vector<quark> quarks = global_data->get_quarks();
+  const size_t nb_rnd = quarks[0].number_of_rnd_vec;
+  const size_t dilE = quarks[0].number_of_dilution_E;
+  const int dilT = quarks[0].number_of_dilution_T;
+  const size_t Q2_size = 4 * dilE;
+  
+  const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
+
+  const size_t nb_op = op_Corr.size();
+
+  std::cout << "\n" << std::endl;
+  clock_t time = clock();
+  #pragma omp parallel 
+  {
+//  Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(Q2_size, 4 * nb_ev);
+  #pragma omp for schedule(dynamic)
+  for(int t_0 = 0; t_0 < Lt; t_0++){
+
+    if(omp_get_thread_num() == 0)
+      std::cout << "\tcomputing single quarkline: " 
+                << std::setprecision(2) << (float) t_0/Lt*100 << "%\r" 
+                << std::flush;
+
+    for(const auto& op : op_Corr){
+
+      for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
+      for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
+      if(rnd_i != rnd_j){
+        for(int t = 0; t < Lt/dilT; t++){
+          // new momentum -> recalculate M[0]
+          // M only depends on momentum and displacement. first_vdv 
+          // prevents repeated calculation for different gamma structures
+          
+          //dilution of u-quark from left
+          for(size_t block_dil = 0; block_dil < 4; block_dil++){
+            cmplx value = 1.;
+            value_dirac(op.id, block_dil, value);
+
+            for(size_t col = 0; col < 4; col++){
+            for(size_t row = 0; row < 4; row++){
+
+               Q1_uncharged[t_0][t][op.id][rnd_i][rnd_j]
+                   .block(row*dilE, col*dilE, dilE, dilE) += value * 
+                 vdaggerv.return_rvdaggerv(op.id_rvdvr, t_0, rnd_i).block(0, 
+                     block_dil* nb_ev, dilE, nb_ev) * 
+                 peram[rnd_j].block(4*nb_ev*t_0 + order_dirac(op.id, block_dil)*
+                     nb_ev, Q2_size*t + col*dilE, nb_ev, dilE);
+          }}}//dilution ends here
+        }// loop over t ends here
+     }}}// loop over rnd ends here
+    }//loop operators
+  }// loops over t_0 ends here
+  }// pragma omp ends
+
+  std::cout << "\tcomputing single quarkline: 100.00%" << std::endl;
   time = clock() - time;
   std::cout << "\t\tSUCCESS - " << ((float) time) / CLOCKS_PER_SEC 
             << " seconds" << std::endl;

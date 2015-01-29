@@ -7,7 +7,8 @@ static GlobalData * const global_data = GlobalData::Instance();
 /******************************************************************************/
 /******************************************************************************/
 LapH::Correlators::Correlators() : basic(), peram(), rnd_vec(), vdaggerv(),
-                                   C4_mes(), C2_mes(), Corr()  {
+                                   C4_mes(), C2_mes(), Q2_trace(), 
+                                   Q2_trace_uncharged()  {
 
   const vec_index_2pt op_C2 = global_data->get_lookup_2pt_trace();
   const size_t nb_op_2pt = op_C2.size();
@@ -29,7 +30,8 @@ LapH::Correlators::Correlators() : basic(), peram(), rnd_vec(), vdaggerv(),
   //operator lists. Momentary values are upper limit
   C4_mes.resize(boost::extents[nb_op_4pt][Lt]);
   C2_mes.resize(boost::extents[nb_op_2pt][Lt]);
-  Corr.resize(boost::extents[nb_op][nb_op][Lt][Lt][nb_rnd][nb_rnd]);
+  Q2_trace.resize(boost::extents[nb_op][nb_op][Lt][Lt][nb_rnd][nb_rnd]);
+  Q2_trace_uncharged.resize(boost::extents[nb_op][nb_op][Lt][Lt][nb_rnd][nb_rnd]);
 }
 /******************************************************************************/
 /******************************************************************************/
@@ -39,29 +41,34 @@ void LapH::Correlators::compute_correlators(const size_t config_i){
   // initialising the big arrays
   set_corr(config_i);
   // setting the correlation functions to zero
-  std::fill(Corr.data(), Corr.data()+Corr.num_elements(), cmplx(.0,.0));
+  std::fill(Q2_trace.data(), 
+    Q2_trace.data()+Q2_trace.num_elements(), cmplx(.0,.0));
+  std::fill(Q2_trace_uncharged.data(), 
+    Q2_trace_uncharged.data()+Q2_trace_uncharged.num_elements(), cmplx(.0,.0));
   std::fill(C4_mes.data(), C4_mes.data()+C4_mes.num_elements(), cmplx(.0,.0));
 
   // global variables from input file needed here
   const int Lt = global_data->get_Lt();
 
   // memory for intermediate matrices when building C4_3 (save multiplications)
-  LapH::CrossOperator X(2);
+//  LapH::CrossOperator X(2);
 
+  basic.init_operator_uncharged('b', vdaggerv, peram);
   basic.init_operator('b', vdaggerv, peram);
 
   // computing the meson correlator which can be used to compute all small
   // trace combinations for 2pt and 4pt functions
-  build_Corr();
+//  build_Q2_trace();
+  build_Q2_trace_uncharged();
 
   // computing the meson 4pt big cross trace
   // TODO: if condition that at least four random vectos are needed
-//  compute_meson_4pt_cross_trace(X);
-//
+  // compute_meson_4pt_cross_trace(X);
+
 //  write_C4_3(config_i);
   build_and_write_2pt(config_i);
-  build_and_write_C4_1(config_i);
-  build_and_write_C4_2(config_i);
+//  build_and_write_C4_1(config_i);
+//  build_and_write_C4_2(config_i);
 
 }
 /******************************************************************************/
