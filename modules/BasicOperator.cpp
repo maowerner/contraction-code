@@ -286,10 +286,10 @@ void BasicOperator::init_operator(const char dilution,
                 << std::setprecision(2) << (float) t_0/Lt*100 << "%\r" 
                 << std::flush;
 
-    for(const auto& op : op_Corr){
+    for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
+      for(int t = 0; t < Lt/dilT; t++){
 
-      for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
-        for(int t = 0; t < Lt/dilT; t++){
+        for(const auto& op : op_Corr){
           // new momentum -> recalculate M[0]
           // M only depends on momentum and displacement. first_vdv 
           // prevents repeated calculation for different gamma structures
@@ -333,22 +333,22 @@ void BasicOperator::init_operator(const char dilution,
                 cmplx value = 1.;
                 value_dirac(op.id, block_dil, value);
 
-                  for(size_t col = 0; col < 4; col++){
                   for(size_t row = 0; row < 4; row++){
+                  for(size_t col = 0; col < 4; col++){
 
                     Q2[t_0][t][ti][op.id][rnd_i][rnd_j]
-                        .block(row*dilE, col*dilE, dilE, dilE) += value * 
-                      M.block(row*dilE, block_dil* nb_ev, dilE, nb_ev) * 
+                        .block(row*dilE, col*dilE, dilE, dilE) += value *
+                      M.block(row*dilE, order_dirac(op.id, block_dil)* nb_ev, dilE, nb_ev) * 
                       peram[rnd_j]
-                        .block(4*nb_ev*t_0 + order_dirac(op.id, block_dil)*nb_ev, 
+                        .block(4*nb_ev*t_0 + block_dil*nb_ev, 
                           Q2_size*tend + col*dilE, nb_ev, dilE);
 
               }}}//dilution ends here
 
           }}}// loops over rnd_j and ti block end here 
-        }// loop over t ends here
-      }// loop over rnd_i ends here
-    }//loop operators
+        }//loop operators
+      }// loop over t ends here
+    }// loop over rnd_i ends here
   }// loops over t_0 ends here
   }// pragma omp ends
 
@@ -411,8 +411,8 @@ void BasicOperator::init_operator_uncharged(const char dilution,
                Q1_uncharged[t_0][t][op.id][rnd_i][rnd_j]
                    .block(row*dilE, col*dilE, dilE, dilE) += value * 
                  vdaggerv.return_rvdaggerv(op.id_rvdvr, t_0, rnd_i).block(0, 
-                     block_dil* nb_ev, dilE, nb_ev) * 
-                 peram[rnd_j].block(4*nb_ev*t_0 + order_dirac(op.id, block_dil)*
+                     order_dirac(op.id, block_dil)* nb_ev, dilE, nb_ev) * 
+                 peram[rnd_j].block(4*nb_ev*t_0 + block_dil*
                      nb_ev, Q2_size*t + col*dilE, nb_ev, dilE);
           }}}//dilution ends here
         }// loop over t ends here
@@ -454,13 +454,15 @@ void BasicOperator::init_operator_uncharged(const char dilution,
 size_t BasicOperator::order_dirac(const size_t index, size_t block) const {
 
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
+  size_t block_reordered = block;
 
   for(const auto& dirac : op_Corr[index].gamma){
     if(dirac != 4){
+      block_reordered = gamma[dirac].row[block_reordered];
     }
   }
 
-  return block;
+  return block_reordered;
 }
 
 /******************************************************************************/
@@ -470,10 +472,12 @@ void BasicOperator::value_dirac(const size_t index, const size_t block,
                                 cmplx& value) const{
 
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
+  size_t block_reordered = block;
 
   for(const auto& dirac : op_Corr[index].gamma){
     if(dirac != 4){
-      value = value * gamma[dirac].value[block];
+      value = value * gamma[dirac].value[block_reordered];
+      block_reordered = gamma[dirac].row[block_reordered];
     }
   }
 

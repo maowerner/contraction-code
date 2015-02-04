@@ -182,7 +182,7 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
   std::fill(rvdaggerv.data(), rvdaggerv.data() + rvdaggerv.num_elements(), 
             Eigen::MatrixXcd::Zero(dilE, 4*nb_ev));
   std::fill(rvdaggervr.data(), rvdaggervr.data() + rvdaggervr.num_elements(), 
-            Eigen::MatrixXcd::Zero(dilE, 4*dilE));
+            Eigen::MatrixXcd::Zero(4*dilE, 4*dilE));
 
   // TODO: just a workaround
   // can be changed to op by running over p = op/nb_dg, but dis currently
@@ -201,7 +201,6 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
       size_t id_VdaggerV = op_Corr[op.index].id_vdv;
 
       for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
-//        Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(nb_ev, 4*dilE);
         // dilution from left
         for(size_t block= 0; block < 4; block++){
         for(size_t vec_i = 0; vec_i < nb_ev; ++vec_i) {
@@ -209,51 +208,27 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
           
           rvdaggerv[op.id][t][rnd_i]
               .block(vec_i%dilE, block*nb_ev, 1, nb_ev) += 
-            vdaggerv[id_VdaggerV][t].row(vec_i) * 
-            std::conj(rnd_vec[rnd_i][blk_i]);
+            std::conj(rnd_vec[rnd_i][blk_i]) * 
+            vdaggerv[id_VdaggerV][t].row(vec_i);
         }}// end of dilution
+
         for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j){
         if(rnd_i != rnd_j){
           // dilution from right
+          for(size_t row = 0; row < 4; row++){
           for(size_t block = 0; block < 4; block++){
           for(size_t vec_j = 0; vec_j < nb_ev; ++vec_j) {
-            size_t blk_j =  block + vec_j * 4 + 4 * nb_ev * t;
-            rvdaggervr[op.id][t][rnd_j][rnd_i]
-                .block(0, block*dilE+vec_j%dilE, dilE, 1) +=
-              rvdaggerv[op.id][t][rnd_i].block(0, block*nb_ev+vec_j, dilE, 1) * 
+            size_t blk_j =  row + vec_j * 4 + 4 * nb_ev * t;
+            rvdaggervr[op.id][t][rnd_i][rnd_j]
+                .block(row*dilE, block*dilE+vec_j%dilE, dilE, 1) +=
+//                .block(0, block*dilE+vec_j%dilE, dilE, 1) +=
+              rvdaggerv[op.id][t][rnd_i].col(block*nb_ev+vec_j) * 
               rnd_vec[rnd_j][blk_j];
-          }}// end of dilution
+          }}}// end of dilution
         }}// rnd_j loop ends here
       }// rnd_i loop ends here
     }
   }
-
-//      for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
-////        Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(nb_ev, 4*dilE);
-//        // dilution from left
-//        for(size_t block= 0; block < 4; block++){
-//        for(size_t vec_i = 0; vec_i < nb_ev; ++vec_i) {
-//          size_t blk_i =  block + vec_i * 4 + 4 * nb_ev * t;
-//          
-//          rvdaggerv[op.id][t][rnd_i]
-//              .block(0, vec_i%dilE + dilE*block, nb_ev, 1) += 
-//            vdaggerv[id_VdaggerV][t].col(vec_i) * rnd_vec[rnd_i][blk_i];
-//        }}// end of dilution
-//        for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j){
-//        if(rnd_i != rnd_j){
-//          // dilution from right
-//          for(size_t block = 0; block < 4; block++){
-//          for(size_t vec_j = 0; vec_j < nb_ev; ++vec_j) {
-//            size_t blk_j =  block + vec_j * 4 + 4 * nb_ev * t;
-//            rvdaggervr[op.id][t][rnd_j][rnd_i]
-//                          .block(vec_j%dilE, dilE*block , 1, dilE) +=
-//                rvdaggerv[op.id][t][rnd_i].block(vec_j, dilE*block, 1, dilE) * 
-//                std::conj(rnd_vec[rnd_j][blk_j]);
-//          }}// end of dilution
-//        }}// rnd_j loop ends here
-//      }// rnd_i loop ends here
-//    }
-//  }
 
   // rvdaggervr for momenta with opposing sign are related by adjoining. Thus
   // for half of the indices, the calculation reduces to adjoining the

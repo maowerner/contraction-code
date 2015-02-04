@@ -17,8 +17,6 @@ void LapH::Correlators::build_Q2_trace(){
   const vec_index_2pt op_C2 = global_data->get_lookup_2pt_trace();
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   const indexlist_2 rnd_vec_index = global_data->get_rnd_vec_2pt();
-  // TODO: must be changed in GlobalData {
-  // TODO: }     Was ist das? - Markus
 
   std::cout << "\n\tcomputing the traces of pi_+/-:\r";
   clock_t time = clock();
@@ -32,15 +30,15 @@ void LapH::Correlators::build_Q2_trace(){
     // CJ: OMP cannot do the parallelization over an auto loop,
     //     implementing a workaround by hand
     //     not used at the moment, increases runtime by a factor of 2
-    #pragma omp parallel
-    #pragma omp single
-    {
+//    #pragma omp parallel
+//    #pragma omp single
+//    {
       for(const auto& op : op_C2){
 
         size_t id_Q2 = op.index_Q2;
         size_t id_Corr = op.index_Corr;
 
-      #pragma omp task shared(op)
+//      #pragma omp task shared(op)
         // TODO: A collpase of both random vectors might be better but
         //       must be done by hand because rnd2 starts from rnd1+1
         for(const auto& rnd_it : rnd_vec_index) {
@@ -55,6 +53,9 @@ void LapH::Correlators::build_Q2_trace(){
             Q2_trace[id_Q2][id_Corr][t_source][t_sink]
                 [rnd_it.first][rnd_it.second]);
 
+//        std::cout << id_Corr << "\t" << rnd_it.first << "\t" << rnd_it.second << "\t"
+//                  << basic.get_operator(t_source, t_sink/dilT, 1, id_Q2, 
+//                                        rnd_it.first, rnd_it.second).block(0,0,6,6) << std::endl;
         } // Loop over random vectors ends here! 
 //      #pragma omp taskwait
       }//Loops over all Quantum numbers 
@@ -62,7 +63,7 @@ void LapH::Correlators::build_Q2_trace(){
       // Using the dagger operation to get all possible random vector combinations
       // TODO: Think about imaginary correlations functions - There might be an 
       //       additional minus sign involved
-    } // end parallel region
+//    } // end parallel region
     
     }// Loops over t_source
   }// Loops over t_sink
@@ -120,7 +121,7 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
             (basic.get_operator_uncharged(t_source, t_sink/dilT, id_Q2, 
               rnd_it.first, rnd_it.second) * 
             basic.get_operator_uncharged(t_sink, t_source/dilT, id_Corr, 
-              rnd_it.first, rnd_it.second)).trace();
+              rnd_it.second, rnd_it.first)).trace();
 
         } // Loop over random vectors ends here! 
 //      #pragma omp taskwait
@@ -158,11 +159,13 @@ void LapH::Correlators::compute_meson_small_traces(const size_t id_si,
 
   for(size_t block = 0; block < 4; block++){
 
-    cmplx value = 1;
+    cmplx value = 1.;
     basic.value_dirac(id_si, block, value);
 
-    Q2_trace += value * (Q2.block(block*dilE, block*dilE, dilE, dilE) *
-            rVdaggerVr.block(0, (basic.order_dirac(id_si, block)*dilE), 
+    Q2_trace += value * (Q2.block(block*dilE, basic.order_dirac(id_si, block)*dilE, dilE, dilE) *
+//           rVdaggerVr.block(0, block*dilE, 
+//            rVdaggerVr.block(basic.order_dirac(id_si, block)*dilE, block*dilE, 
+            rVdaggerVr.block(block*dilE, basic.order_dirac(id_si, block)*dilE, 
             dilE, dilE)).trace();
     }
 }
@@ -212,7 +215,7 @@ void LapH::Correlators::build_and_write_2pt(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C2_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] += 
-           Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
+           Q2_trace[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
       } //Loop over random vectors
     }}//Loops over all Quantum numbers
   }}//Loops over time
