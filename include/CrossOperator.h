@@ -33,16 +33,15 @@ public:
   void swap(const size_t nb1, const size_t nb2);
 
   inline const Eigen::MatrixXcd& operator()(const size_t nb, 
-                                            const size_t id_so,
-                                            const size_t id_si, 
+                                            const size_t id,
                                             const size_t rnd1, 
                                             const size_t rnd2, 
                                             const size_t rnd3) const {
-    return X[nb][id_si][id_so][rnd1][rnd2][rnd3];
+    return X[nb][id][rnd1][rnd2][rnd3];
   }
 
 private:
-  std::vector<array_Xcd_d5_eigen> X;
+  std::vector<array_Xcd_d4_eigen> X;
 
 };
 

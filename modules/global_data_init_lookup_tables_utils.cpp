@@ -257,8 +257,9 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
     counter++;
   }
 
+  std::cout << "lookup_vdv" << std::endl;
   for(const auto& op_vdv : lookup_vdv)
-    std::cout << "\t" << op_vdv.id << "\t" << op_vdv.index << std::endl;
+    std::cout << op_vdv.id << "\t" << op_vdv.index << std::endl;
 
   counter = 0;
   for(auto& op_rvdvr : lookup_rvdvr){
@@ -280,8 +281,10 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
     counter++;
   }
 
+  std::cout << "lookup_rvdvr" << std::endl;
   for(const auto& op_rvdvr : lookup_rvdvr)
-    std::cout << "\t" << op_rvdvr.id << "\t" << op_rvdvr.adjoint << "\t" << op_rvdvr.id_adjoint << "\t" << op_rvdvr.index << std::endl;
+    std::cout << op_rvdvr.id << "\t" << op_rvdvr.adjoint << "\t" 
+              << op_rvdvr.id_adjoint << "\t" << op_rvdvr.index << std::endl;
 
 }
 // *****************************************************************************
@@ -314,7 +317,6 @@ void set_index_4pt(const Operators& in1, const Operators& in2,
                    const vec_pdg_Corr& lookup_corr, vec_index_4pt& lookup_4pt) {
 
   index_4pt write;
-  std::array<int, 3> zero = {{0, 0, 0}};
 
   for(const auto& op1 : lookup_corr){
   if(compare_quantum_numbers_of_pdg(op1, in1)){
@@ -324,17 +326,12 @@ void set_index_4pt(const Operators& in1, const Operators& in2,
       if(compare_quantum_numbers_of_pdg(op3, in3)){
         for(const auto& op4 : lookup_corr){
         if(compare_quantum_numbers_of_pdg(op4, in4)){
-          // enforce cm momentum conservation
-          if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
-          // only diagonal entries of the GEVP
-          if( abs_p3(op1) == abs_p3(op2) ){
             write.index_Q2[0]   = op1.id;
             write.index_Corr[0] = op2.id;
             write.index_Q2[1]   = op3.id;
             write.index_Corr[1] = op4.id;
 
             lookup_4pt.push_back(write);
-          }}
         }}
       }} //loops over sink end here
     }}

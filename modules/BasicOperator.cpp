@@ -406,15 +406,14 @@ void BasicOperator::init_operator_uncharged(const char dilution,
             value_dirac(op.id, block_dil, value);
 
             for(size_t col = 0; col < 4; col++){
-            for(size_t row = 0; row < 4; row++){
 
                Q1_uncharged[t_0][t][op.id][rnd_i][rnd_j]
-                   .block(row*dilE, col*dilE, dilE, dilE) += value * 
+                   .block(block_dil*dilE, col*dilE, dilE, dilE) += value * 
                  vdaggerv.return_rvdaggerv(op.id_rvdvr, t_0, rnd_i).block(0, 
-                     order_dirac(op.id, block_dil)* nb_ev, dilE, nb_ev) * 
-                 peram[rnd_j].block(4*nb_ev*t_0 + block_dil*
+                     block_dil* nb_ev, dilE, nb_ev) * 
+                 peram[rnd_j].block(4*nb_ev*t_0 + order_dirac(op.id, block_dil) *
                      nb_ev, Q2_size*t + col*dilE, nb_ev, dilE);
-          }}}//dilution ends here
+          }}//dilution ends here
         }// loop over t ends here
      }}}// loop over rnd ends here
     }//loop operators

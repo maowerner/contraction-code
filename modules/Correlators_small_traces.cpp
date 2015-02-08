@@ -30,15 +30,15 @@ void LapH::Correlators::build_Q2_trace(){
     // CJ: OMP cannot do the parallelization over an auto loop,
     //     implementing a workaround by hand
     //     not used at the moment, increases runtime by a factor of 2
-//    #pragma omp parallel
-//    #pragma omp single
-//    {
+    #pragma omp parallel
+    #pragma omp single
+    {
       for(const auto& op : op_C2){
 
         size_t id_Q2 = op.index_Q2;
         size_t id_Corr = op.index_Corr;
 
-//      #pragma omp task shared(op)
+      #pragma omp task shared(op)
         // TODO: A collpase of both random vectors might be better but
         //       must be done by hand because rnd2 starts from rnd1+1
         for(const auto& rnd_it : rnd_vec_index) {
@@ -53,9 +53,6 @@ void LapH::Correlators::build_Q2_trace(){
             Q2_trace[id_Q2][id_Corr][t_source][t_sink]
                 [rnd_it.first][rnd_it.second]);
 
-//        std::cout << id_Corr << "\t" << rnd_it.first << "\t" << rnd_it.second << "\t"
-//                  << basic.get_operator(t_source, t_sink/dilT, 1, id_Q2, 
-//                                        rnd_it.first, rnd_it.second).block(0,0,6,6) << std::endl;
         } // Loop over random vectors ends here! 
 //      #pragma omp taskwait
       }//Loops over all Quantum numbers 
@@ -63,7 +60,7 @@ void LapH::Correlators::build_Q2_trace(){
       // Using the dagger operation to get all possible random vector combinations
       // TODO: Think about imaginary correlations functions - There might be an 
       //       additional minus sign involved
-//    } // end parallel region
+    } // end parallel region
     
     }// Loops over t_source
   }// Loops over t_sink
@@ -94,7 +91,6 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
     std::cout << "\tcomputing the traces of pi_+/-: " 
         << std::setprecision(2) << (float) t_sink/Lt*100 << "%\r" 
         << std::flush;
-    int t_sink_1 = (t_sink + 1) % Lt;
     for(int t_source = 0; t_source < Lt; ++t_source){
 
     // CJ: OMP cannot do the parallelization over an auto loop,
@@ -116,6 +112,9 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
           // Corr = tr(D_d^-1(t_sink) Gamma D_u^-1(t_source) Gamma)
           // TODO: Just a workaround
           
+          if(t_sink == 0 && t_source == 0)
+            std::cout << rnd_it.first << "\t" << rnd_it.second << std::endl;
+
           Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd_it.first]
               [rnd_it.second] =
             (basic.get_operator_uncharged(t_source, t_sink/dilT, id_Q2, 
@@ -287,8 +286,11 @@ void LapH::Correlators::build_and_write_C4_1(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C4_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] +=
-          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink_1][rnd[0]][rnd[2]]) *
-          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink][rnd[1]][rnd[3]]);
+          cmplx(
+          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink_1][rnd[0]][rnd[2]]).real() *
+          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink][rnd[1]][rnd[3]]).real(),
+          ((Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink_1][rnd[0]][rnd[2]]) *
+          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink][rnd[1]][rnd[3]])).imag());
       } // loop over random vectors
     }}//loops operators
   }}// loops t_sink and t_source
@@ -341,7 +343,7 @@ void LapH::Correlators::build_and_write_C4_2(const size_t config_i){
   std::fill(C4_mes.data(), C4_mes.data() + C4_mes.num_elements(), 
                                                              cmplx(0.0, 0.0));
   for(int t_source = 0; t_source < Lt; ++t_source){
-  for(int t_sink = 0; t_sink < Lt - 1; ++t_sink){
+  for(int t_sink = 0; t_sink < Lt; ++t_sink){
     int t_source_1 = (t_source + 1) % Lt;
     int t_sink_1 = (t_sink + 1) % Lt;
 
@@ -354,8 +356,12 @@ void LapH::Correlators::build_and_write_C4_2(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C4_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] +=
-          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink][rnd[0]][rnd[2]]) *
-          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink_1][rnd[1]][rnd[3]]);
+          cmplx(
+          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink][rnd[0]][rnd[2]]).real() *
+          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink_1][rnd[1]][rnd[3]]).real(),
+          ((Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink][rnd[0]][rnd[2]]) *
+          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink_1][rnd[1]][rnd[3]])).imag());
+
       } // loop over random vectors
     }}//loops operators
   }}// loops t_source and t_sink

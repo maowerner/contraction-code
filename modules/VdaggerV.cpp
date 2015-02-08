@@ -250,12 +250,8 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
         // vector of blocks. To reproduce the correct behavior under adjoining, 
         // the blocks have to be adjoined seperately.
         // is .adjoint().transpose() faster?
-        for(size_t block = 0; block < 4; block++){
-          rvdaggervr[op.id][t][rnd_j][rnd_i]
-                              .block(0, block*dilE, dilE, dilE) =
-            (rvdaggervr[op.id_adjoint][t][rnd_i][rnd_j]
-                              .block(0, block*dilE, dilE, dilE)).adjoint();
-        }
+          rvdaggervr[op.id][t][rnd_j][rnd_i] =
+            (rvdaggervr[op.id_adjoint][t][rnd_i][rnd_j]).adjoint();
       }}}// loops over rnd vecs
 
     }

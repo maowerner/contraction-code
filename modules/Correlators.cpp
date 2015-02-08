@@ -10,9 +10,9 @@ LapH::Correlators::Correlators() : basic(), peram(), rnd_vec(), vdaggerv(),
                                    C4_mes(), C2_mes(), Q2_trace(), 
                                    Q2_trace_uncharged()  {
 
-  const vec_index_2pt op_C2 = global_data->get_lookup_2pt_trace();
+  const vec_index_IO_1 op_C2 = global_data->get_lookup_2pt_IO();
   const size_t nb_op_2pt = op_C2.size();
-  const vec_index_4pt op_C4 = global_data->get_lookup_4pt_trace();
+  const vec_index_IO_1 op_C4 = global_data->get_lookup_4pt_3_IO();
   const size_t nb_op_4pt = op_C4.size();
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   const size_t nb_op = op_Corr.size();
@@ -22,7 +22,6 @@ LapH::Correlators::Correlators() : basic(), peram(), rnd_vec(), vdaggerv(),
 
   const size_t Lt = global_data->get_Lt();
   const size_t nb_ev = global_data->get_number_of_eigen_vec();
-  // TODO: }
 
   rnd_vec.resize(nb_rnd, LapH::RandomVector(Lt*nb_ev*4));
 
@@ -51,7 +50,7 @@ void LapH::Correlators::compute_correlators(const size_t config_i){
   const int Lt = global_data->get_Lt();
 
   // memory for intermediate matrices when building C4_3 (save multiplications)
-//  LapH::CrossOperator X(2);
+  LapH::CrossOperator X(2);
 
   basic.init_operator('b', vdaggerv, peram);
 //  basic.init_operator_uncharged('b', vdaggerv, peram);
@@ -59,17 +58,18 @@ void LapH::Correlators::compute_correlators(const size_t config_i){
   // computing the meson correlator which can be used to compute all small
   // trace combinations for 2pt and 4pt functions
   build_Q2_trace();
-//  build_Q2_trace_uncharged();
 
   // computing the meson 4pt big cross trace
   // TODO: if condition that at least four random vectos are needed
-  // compute_meson_4pt_cross_trace(X);
+  compute_meson_4pt_cross_trace(X);
 
-//  write_C4_3(config_i);
+  write_C4_3(config_i);
   build_and_write_2pt(config_i);
-//  build_and_write_C4_1(config_i);
-//  build_and_write_C4_2(config_i);
+  build_and_write_C4_1(config_i);
+  build_and_write_C4_2(config_i);
 
+//  build_Q2_trace_uncharged();
+//  build_and_write_2pt(config_i);
 }
 /******************************************************************************/
 /******************************************************************************/
