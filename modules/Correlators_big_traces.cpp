@@ -24,30 +24,52 @@ void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
         << std::setprecision(2) << (float) t_sink/Lt*100 << "%\r" 
         << std::flush;
     int t_sink_1 = (t_sink + 1) % Lt;
-    for(int t = 0; t < Lt; t++){
+    for(int t = 0; t < Lt-1; t++){
       const int t_source = (t_sink + 1 + t)%Lt;
       const int t_source_1 = (t_source + 1) % Lt;
 
-      if(t_source != (t_sink+1)%Lt){
-        if(t_source%2 == 0){
-          X.swap(1, 0);
-          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 0);
-        }
-        else{
-          X.swap(0, 1);
-          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
-        }
-      }
-      else{
-        if(t_source%2 == 0){
+//      if(t != 0){
+//        if(t%2 == 0){
+//          X.swap(1, 0);
+//          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
+//        }
+//        else{
+//          X.swap(0, 1);
+//          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
+//        }
+//      }
+//      else{
+//        if(t_source%2 == 0){
           X.construct(basic, vdaggerv, 0, t_source,   t_sink, 1);
           X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 0);
-        }
-        else{
-          X.construct(basic, vdaggerv, 0, t_source,   t_sink, 0);
-          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
-        }
-      }
+//        }
+//        else{
+//          X.construct(basic, vdaggerv, 0, t_source,   t_sink, 0);
+//          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
+//        }
+//      }
+
+//      if(t_source != (t_sink+1)%Lt){
+//      if(t != 0){
+//        if(t_source%2 == 0){
+//          X.swap(1, 0);
+//          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 0);
+//        }
+//        else{
+//          X.swap(0, 1);
+//          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
+//        }
+//      }
+//      else{
+//        if(t_source%2 == 0){
+//          X.construct(basic, vdaggerv, 0, t_source,   t_sink, 1);
+//          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 0);
+//        }
+//        else{
+//          X.construct(basic, vdaggerv, 0, t_source,   t_sink, 0);
+//          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 1);
+//        }
+//      }
 
       // The parallelisation is not done with #pragma omp for because it is 
       // incompatible with auto loops
@@ -58,7 +80,6 @@ void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
         // different quantum number combinations denoted by the index i may be 
         // handled by different tasks. Their results are summed up in the end.
         // TODO: Further speedup by different parallelisation might be possible
-//        #pragma omp task shared(op.id, i, i_0, i_1, i_2, i_3)
         for(const auto& i : op.index_pt){
 
 //          size_t i_0 = op_C4[i].index_Q2[0];
@@ -75,21 +96,14 @@ void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
           cmplx priv_C4(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-            if(t_source%2 == 0)
+            if(t%2 == 0)
 
-//              priv_C4 += (X(1, i_0, i_1, rnd_it[3], rnd_it[0], rnd_it[1]) *
-//                          X(0, i_2, i_3, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
-//            else
-//              priv_C4 += std::conj(
-//                         (X(1, i_0, i_1, rnd_it[3], rnd_it[0], rnd_it[1]) *
-//                          X(0, i_2, i_3, rnd_it[1], rnd_it[2], rnd_it[3])).trace());
-
-              priv_C4 += (X(1, op_C4[i].id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op_C4[i].id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
+              priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
             else
               priv_C4 += std::conj(
-                         (X(1, op_C4[i].id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op_C4[i].id, rnd_it[1], rnd_it[2], rnd_it[3])).trace());
+                         (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace());
 
           }
           #pragma omp critical

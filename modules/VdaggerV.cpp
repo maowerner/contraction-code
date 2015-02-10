@@ -43,6 +43,7 @@ LapH::VdaggerV::VdaggerV() : vdaggerv(), rvdaggervr(), momentum(),
   // correctly and daggering
   vdaggerv.resize(boost::extents[nb_VdaggerV][Lt]);
   rvdaggerv.resize(boost::extents[nb_rVdaggerVr][Lt][nb_rnd]);
+  vdaggervr.resize(boost::extents[nb_rVdaggerVr][Lt][nb_rnd]);
   rvdaggervr.resize(boost::extents[nb_rVdaggerVr][Lt][nb_rnd][nb_rnd]);
 
   // the momenta only need to be calculated for a subset of quantum numbers
@@ -181,6 +182,8 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
 
   std::fill(rvdaggerv.data(), rvdaggerv.data() + rvdaggerv.num_elements(), 
             Eigen::MatrixXcd::Zero(dilE, 4*nb_ev));
+  std::fill(vdaggervr.data(), vdaggervr.data() + vdaggervr.num_elements(), 
+            Eigen::MatrixXcd::Zero(nb_ev, 4*dilE));
   std::fill(rvdaggervr.data(), rvdaggervr.data() + rvdaggervr.num_elements(), 
             Eigen::MatrixXcd::Zero(4*dilE, 4*dilE));
 
@@ -210,6 +213,11 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
               .block(vec_i%dilE, block*nb_ev, 1, nb_ev) += 
             std::conj(rnd_vec[rnd_i][blk_i]) * 
             vdaggerv[id_VdaggerV][t].row(vec_i);
+
+          vdaggervr[op.id][t][rnd_i]
+              .col(block*dilE + vec_i%dilE) += 
+            rnd_vec[rnd_i][blk_i] * 
+            vdaggerv[id_VdaggerV][t].col(vec_i);
         }}// end of dilution
 
         for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j){
@@ -221,7 +229,6 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
             size_t blk_j =  row + vec_j * 4 + 4 * nb_ev * t;
             rvdaggervr[op.id][t][rnd_i][rnd_j]
                 .block(row*dilE, block*dilE+vec_j%dilE, dilE, 1) +=
-//                .block(0, block*dilE+vec_j%dilE, dilE, 1) +=
               rvdaggerv[op.id][t][rnd_i].col(block*nb_ev+vec_j) * 
               rnd_vec[rnd_j][blk_j];
           }}}// end of dilution
@@ -251,7 +258,7 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
         // the blocks have to be adjoined seperately.
         // is .adjoint().transpose() faster?
           rvdaggervr[op.id][t][rnd_j][rnd_i] =
-            (rvdaggervr[op.id_adjoint][t][rnd_i][rnd_j]).adjoint();
+            rvdaggervr[op.id_adjoint][t][rnd_i][rnd_j].adjoint();
       }}}// loops over rnd vecs
 
     }

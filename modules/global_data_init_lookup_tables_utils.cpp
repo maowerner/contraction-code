@@ -316,6 +316,8 @@ void set_index_4pt(const Operators& in1, const Operators& in2,
                    const Operators& in3, const Operators& in4,
                    const vec_pdg_Corr& lookup_corr, vec_index_4pt& lookup_4pt) {
 
+  std::array<int, 3> zero = {{0, 0, 0}};
+
   index_4pt write;
 
   for(const auto& op1 : lookup_corr){
@@ -326,12 +328,18 @@ void set_index_4pt(const Operators& in1, const Operators& in2,
       if(compare_quantum_numbers_of_pdg(op3, in3)){
         for(const auto& op4 : lookup_corr){
         if(compare_quantum_numbers_of_pdg(op4, in4)){
+
+          // enforce cm momentum conservation
+          if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
+
             write.index_Q2[0]   = op1.id;
             write.index_Corr[0] = op2.id;
             write.index_Q2[1]   = op3.id;
             write.index_Corr[1] = op4.id;
 
             lookup_4pt.push_back(write);
+          }
+
         }}
       }} //loops over sink end here
     }}

@@ -12,8 +12,9 @@ LapH::Correlators::Correlators() : basic(), peram(), rnd_vec(), vdaggerv(),
 
   const vec_index_IO_1 op_C2 = global_data->get_lookup_2pt_IO();
   const size_t nb_op_2pt = op_C2.size();
-  const vec_index_IO_1 op_C4 = global_data->get_lookup_4pt_3_IO();
-  const size_t nb_op_4pt = op_C4.size();
+  const vec_index_IO_1 op_C4_3 = global_data->get_lookup_4pt_3_IO();
+  const vec_index_IO_2 op_C4_1 = global_data->get_lookup_4pt_1_IO();
+  const size_t nb_op_4pt = std::max(op_C4_3.size(), op_C4_1.size());
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   const size_t nb_op = op_Corr.size();
 //  const size_t nb_op = global_data->get_number_of_operators();

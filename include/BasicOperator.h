@@ -25,7 +25,11 @@ public:
                      const LapH::VdaggerV& vdaggerv,
                      const LapH::Perambulator& peram);
 
-  void init_operator_uncharged(const char dilution, 
+  void init_operator_u(const char dilution, 
+                     const LapH::VdaggerV& vdaggerv,
+                     const LapH::Perambulator& peram);
+
+  void init_operator_d(const char dilution, 
                      const LapH::VdaggerV& vdaggerv,
                      const LapH::Perambulator& peram);
 
@@ -38,12 +42,19 @@ public:
   }
 
   // returns (P^(b) rho_i)^dagger V^dagger V Gamma D_u^-1 (P^(b) rho_j)
-  inline const Eigen::MatrixXcd& get_operator_uncharged(const int t1, const int t2,
+  inline const Eigen::MatrixXcd& get_operator_u(const int t1, const int t2,
                                  const size_t index,
                                  const size_t rnd_i, const size_t rnd_j) const {
-    return Q1_uncharged[t1][t2][index][rnd_i][rnd_j];
+    return Q1_u[t1][t2][index][rnd_i][rnd_j];
   }
- 
+
+   // returns (P^(b) rho_i)^dagger V^dagger V Gamma D_u^-1 (P^(b) rho_j)
+  inline const Eigen::MatrixXcd& get_operator_d(const int t1, const int t2,
+                                 const size_t index,
+                                 const size_t rnd_i, const size_t rnd_j) const {
+    return Q1_d[t1][t2][index][rnd_i][rnd_j];
+  }
+
 
   void mult_dirac(const Eigen::MatrixXcd& matrix, Eigen::MatrixXcd& reordered,
                   const size_t index) const;
@@ -56,7 +67,8 @@ public:
 
 private:
   array_Xcd_d6_eigen Q2;
-  array_Xcd_d5_eigen Q1_uncharged;
+  array_Xcd_d5_eigen Q1_u;
+  array_Xcd_d5_eigen Q1_d;
 
 };
 

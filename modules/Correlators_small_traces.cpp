@@ -117,9 +117,9 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
 
           Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd_it.first]
               [rnd_it.second] =
-            (basic.get_operator_uncharged(t_source, t_sink/dilT, id_Q2, 
+            (basic.get_operator_u(t_source, t_sink/dilT, id_Q2, 
               rnd_it.first, rnd_it.second) * 
-            basic.get_operator_uncharged(t_sink, t_source/dilT, id_Corr, 
+            basic.get_operator_u(t_sink, t_source/dilT, id_Corr, 
               rnd_it.second, rnd_it.first)).trace();
 
         } // Loop over random vectors ends here! 
@@ -162,8 +162,6 @@ void LapH::Correlators::compute_meson_small_traces(const size_t id_si,
     basic.value_dirac(id_si, block, value);
 
     Q2_trace += value * (Q2.block(block*dilE, basic.order_dirac(id_si, block)*dilE, dilE, dilE) *
-//           rVdaggerVr.block(0, block*dilE, 
-//            rVdaggerVr.block(basic.order_dirac(id_si, block)*dilE, block*dilE, 
             rVdaggerVr.block(block*dilE, basic.order_dirac(id_si, block)*dilE, 
             dilE, dilE)).trace();
     }
@@ -286,11 +284,9 @@ void LapH::Correlators::build_and_write_C4_1(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C4_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] +=
-          cmplx(
-          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink_1][rnd[0]][rnd[2]]).real() *
-          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink][rnd[1]][rnd[3]]).real(),
-          ((Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink_1][rnd[0]][rnd[2]]) *
-          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink][rnd[1]][rnd[3]])).imag());
+          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink_1][rnd[0]][rnd[2]]) *
+          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink][rnd[1]][rnd[3]]);
+
       } // loop over random vectors
     }}//loops operators
   }}// loops t_sink and t_source
@@ -356,11 +352,8 @@ void LapH::Correlators::build_and_write_C4_2(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C4_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] +=
-          cmplx(
-          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink][rnd[0]][rnd[2]]).real() *
-          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink_1][rnd[1]][rnd[3]]).real(),
-          ((Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink][rnd[0]][rnd[2]]) *
-          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink_1][rnd[1]][rnd[3]])).imag());
+          (Q2_trace[id_Q2_0][id_Corr_0][t_source_1][t_sink][rnd[0]][rnd[2]]) *
+          (Q2_trace[id_Q2_1][id_Corr_1][t_source][t_sink_1][rnd[1]][rnd[3]]);
 
       } // loop over random vectors
     }}//loops operators

@@ -28,23 +28,24 @@ quark = u:5:TI:2:EI:6:DI:4
 
 # operators to be used
 [operator_lists]
-#operator_list = g5.d0.p0:g5.d0.p1
-operator_list = g0.d0.p0,1
-operator_list = g1.d0.p0
-operator_list = g2.d0.p0
-operator_list = g3.d0.p0
-operator_list = g4.d0.p0
 operator_list = g5.d0.p0,1
-operator_list = g6.d0.p0
+#operator_list = g0.d0.p0,1
+#operator_list = g1.d0.p0
+#operator_list = g2.d0.p0
+#operator_list = g3.d0.p0
+#operator_list = g4.d0.p0
+#operator_list = g5.d0.p0,1
+#operator_list = g6.d0.p0
 
 # all correlation functions which will be computed !!MUST BE AT END OF FILE!!
 [correlator_lists]
-#correlator_list = C2+:Q0:Op0:Q0:Op0
+correlator_list = C2+:Q0:Op0:Q0:Op0
 #correlator_list = C2+:Q0:Op1:Q0:Op1
 #correlator_list = C2+:Q0:Op2:Q0:Op2
 #correlator_list = C2+:Q0:Op3:Q0:Op3
 #correlator_list = C2+:Q0:Op4:Q0:Op4
-correlator_list = C2+:Q0:Op5:Q0:Op5
+#correlator_list = C2+:Q0:Op5:Q0:Op5
 #correlator_list = C2+:Q0:Op6:Q0:Op6
-correlator_list = C4I2+:Q0:Op5:Q0:Op5:Q0:Op5:Q0:Op5
+correlator_list = C4I2+:Q0:Op0:Q0:Op0:Q0:Op0:Q0:Op0
+#correlator_list = C4I2+:Q0:Op5:Q0:Op5:Q0:Op5:Q0:Op5
 

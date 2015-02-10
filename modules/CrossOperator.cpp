@@ -7,7 +7,6 @@ LapH::CrossOperator::CrossOperator(const size_t number) : X(number) {
 
   const vec_index_IO_1 op_C4 = global_data->get_lookup_4pt_3_IO();
   const size_t nb_op = op_C4.size();
-  std::cout << "\tnb_op = " << nb_op << std::endl;
   const std::vector<quark> quarks = global_data->get_quarks();
   const size_t nb_rnd = quarks[0].number_of_rnd_vec;
   const size_t dilE = quarks[0].number_of_dilution_E;
@@ -100,14 +99,29 @@ void LapH::CrossOperator::compute_X(const BasicOperator& basic,
   const std::vector<quark> quarks = global_data->get_quarks();
   const size_t dilE = quarks[0].number_of_dilution_E;
 
+  X = Eigen::MatrixXcd::Zero(4*dilE, 4*dilE);
+
   for(size_t block = 0; block < 4; block++){
 
     cmplx value = 1;
     basic.value_dirac(id_Corr, block, value);
 
+//    for(size_t row = 0; row < 4; row++){
+//    for(size_t col = 0; col < 4; col++){
+//
+//      X.block(row*dilE, col*dilE, dilE, dilE) +=
+//        value * Q2.block(row*dilE, basic.order_dirac(id_Corr, block)*dilE, dilE, dilE) * 
+//        rVdaggerVr.block(basic.order_dirac(id_Corr, block)*dilE, 
+////        rVdaggerVr.block(block*dilE, 
+//            basic.order_dirac(id_Corr, col)*dilE, dilE, dilE);
+//
+//    }}
+
     X.block(0, block*dilE, 4*dilE, dilE) = 
       value * Q2.block(0, block*dilE, 4*dilE, dilE) * 
-      rVdaggerVr.block(block*dilE, basic.order_dirac(id_Corr, block)*dilE, dilE, dilE);
+      rVdaggerVr.block(basic.order_dirac(id_Corr, block)*dilE, block*dilE,
+//          basic.order_dirac(id_Corr, block)*dilE, 
+          dilE, dilE);
 
     }// loop block ends here
 
@@ -119,7 +133,7 @@ void LapH::CrossOperator::compute_X(const BasicOperator& basic,
 void LapH::CrossOperator::swap(const size_t nb1, const size_t nb2){
   
   const indexlist_3 rnd_vec_index = global_data->get_rnd_vec_3pt();
-  const vec_index_4pt op_C4 = global_data->get_lookup_4pt_trace();
+  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_4pt_3_IO();
   // TODO: }
   // TODO: Think about for each loop
 
@@ -128,7 +142,7 @@ void LapH::CrossOperator::swap(const size_t nb1, const size_t nb2){
   #pragma omp parallel
   #pragma omp single
   {
-    for(auto& op : op_C4){
+    for(auto& op : op_C4_IO){
       #pragma omp task shared(op)
       for(auto& rnd_it : rnd_vec_index) {
         X[nb1][op.id][rnd_it[0]][rnd_it[1]][rnd_it[2]].swap(
