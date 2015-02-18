@@ -8,6 +8,65 @@ static GlobalData * const global_data = GlobalData::Instance();
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
+void LapH::Correlators::build_Q1_trace(){
+
+  const size_t Lt = global_data->get_Lt();
+  const std::vector<quark> quarks = global_data->get_quarks();
+  const int dilT = quarks[0].number_of_dilution_T;
+
+  const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
+  const indexlist_1 rnd_vec_index = global_data->get_rnd_vec_1pt();
+
+  std::cout << "\n\tcomputing the traces of pi_+/-:\r";
+  clock_t time = clock();
+  for(int t = 0; t < Lt; ++t){
+    std::cout << "\tcomputing the traces of u/d: " 
+        << std::setprecision(2) << (float) t/Lt*100 << "%\r" 
+        << std::flush;
+
+    // CJ: OMP cannot do the parallelization over an auto loop,
+    //     implementing a workaround by hand
+    //     not used at the moment, increases runtime by a factor of 2
+    #pragma omp parallel
+    #pragma omp single
+    {
+      for(const auto& op : op_Corr){
+
+      #pragma omp task shared(op)
+        // TODO: A collpase of both random vectors might be better but
+        //       must be done by hand because rnd2 starts from rnd1+1
+        for(const auto& rnd_it : rnd_vec_index) {
+          // build all 2pt traces leading to C2_mes
+          // Corr = tr(D_d^-1(t_sink) Gamma D_u^-1(t_source) Gamma)
+          // TODO: Just a workaround
+          
+          Q1_u_trace[op.id][t][rnd_it] = 
+           (basic.get_operator_u(t, t/dilT, op.id, rnd_it, rnd_it)).trace();
+          Q1_d_trace[op.id][t][rnd_it] = 
+            (basic.get_operator_d(t/dilT, t, op.id, rnd_it, rnd_it)).trace();
+
+        } // Loop over random vectors ends here! 
+//      #pragma omp taskwait
+      }//Loops over all Quantum numbers 
+    
+      // Using the dagger operation to get all possible random vector combinations
+      // TODO: Think about imaginary correlations functions - There might be an 
+      //       additional minus sign involved
+    } // end parallel region
+    
+  }// Loops over t
+
+  std::cout << "\tcomputing the traces of pi_+/-: " << "100.00%" << std::endl;
+  time = clock() - time;
+  std::cout << "\t\tSUCCESS - " << ((float) time)/CLOCKS_PER_SEC 
+            << " seconds" << std::endl;
+
+}
+
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
 void LapH::Correlators::build_Q2_trace(){
 
   const size_t Lt = global_data->get_Lt();
@@ -212,7 +271,8 @@ void LapH::Correlators::build_and_write_2pt(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C2_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] += 
-           Q2_trace[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
+//           Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
+           Q1_d_trace[id_Q2][t_source][rnd.first] * Q1_d_trace[id_Corr][t_sink][rnd.second];
       } //Loop over random vectors
     }}//Loops over all Quantum numbers
   }}//Loops over time
@@ -228,7 +288,7 @@ void LapH::Correlators::build_and_write_2pt(const size_t config_i){
   // attributes  - vector of tags containing quantum numbers for each correlator
   // correlators - vector of correlators
 
-  sprintf(outfile, "%s/C2_pi+-_conf%04d.dat", outpath.c_str(), (int)config_i);
+  sprintf(outfile, "%s/C2_d_conf%04d.dat", outpath.c_str(), (int)config_i);
   export_corr_IO(outfile, op_C2_IO, "C2+", C2_mes);
 
   time = clock() - time;
@@ -263,8 +323,7 @@ void LapH::Correlators::build_and_write_C4_1(const size_t config_i){
   FILE *fp = NULL;
   std::string outpath = global_data->get_output_path() + "/" + 
       global_data->get_name_lattice();
-
-  if(op_C4_IO.size() == 0)
+if(op_C4_IO.size() == 0)
     return;
 
   // setting the correlation function to zero

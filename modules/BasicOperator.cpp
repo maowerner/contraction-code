@@ -242,7 +242,7 @@ BasicOperator::BasicOperator() : gamma(), Q2() {
   for(int i = 0; i < 16; ++i)
     create_gamma(gamma, i);
 
-  Q2.resize(boost::extents[Lt][Lt/dilT][3][nb_op][nb_rnd][nb_rnd]);
+  Q2.resize(boost::extents[Lt][Lt/dilT][5][nb_op][nb_rnd][nb_rnd]);
   std::fill(Q2.data(), Q2.data() + Q2.num_elements(), 
             Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
 
@@ -250,7 +250,7 @@ BasicOperator::BasicOperator() : gamma(), Q2() {
   std::fill(Q1_u.data(), Q1_u.data() + Q1_u.num_elements(), 
             Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
 
-  Q1_d.resize(boost::extents[Lt][Lt/dilT][nb_op][nb_rnd][nb_rnd]);
+  Q1_d.resize(boost::extents[Lt/dilT][Lt][nb_op][nb_rnd][nb_rnd]);
   std::fill(Q1_d.data(), Q1_d.data() + Q1_d.num_elements(), 
             Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
 
@@ -325,9 +325,21 @@ void BasicOperator::init_operator(const char dilution,
             }}// loops over row and col end here
           }//if over same gamma structure ends here
 
-          for(int ti = 0; ti < 3; ti++){
+          // ti denotes times of Quarkline:
+          // 0 - t -> t_0 -> t-1    I=2   4pt
+          // 1 - t -> t_0 -> t      I=1,2 2pt
+          // 2 - t -> t_0 -> t+1    I=2   4pt
+          // 3 - t -> t_0 -> t_0-1  I=1   3pt,4pt
+          // 4 - t -> t_0 -> t_0+1  I=1   3pt,4pt
+          for(int ti = 0; ti < 5; ti++){
           // getting the neighbour blocks
-          const int tend = (Lt/dilT+t + ti - 1)%(Lt/dilT);  
+            int tend;
+            if(ti < 3)
+              //(tend = t+ti-1)/dilT also working?? 
+              tend = (Lt/dilT+t + ti - 1)%(Lt/dilT);  
+            else
+//              tend = (Lt/dilT+t_0 + 2*(ti-3) - 1)%(Lt/dilT);
+              tend = ((Lt + t_0 + 2*(ti-3) - 1)%Lt)/dilT;
           for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
             if(rnd_i != rnd_j){
 
@@ -397,7 +409,6 @@ void BasicOperator::init_operator_u(const char dilution,
 
       for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
       for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
-      if(rnd_i != rnd_j){
         for(int t = 0; t < Lt/dilT; t++){
           // new momentum -> recalculate M[0]
           // M only depends on momentum and displacement. first_vdv 
@@ -411,14 +422,16 @@ void BasicOperator::init_operator_u(const char dilution,
             for(size_t col = 0; col < 4; col++){
 
                Q1_u[t_0][t][op.id][rnd_i][rnd_j]
-                   .block(block_dil*dilE, col*dilE, dilE, dilE) += value * 
+                   .block(block_dil*dilE, 0, dilE, 4*dilE) += value * 
                  vdaggerv.return_rvdaggerv(op.id_rvdvr, t_0, rnd_i).block(0, 
                      block_dil* nb_ev, dilE, nb_ev) * 
                  peram[rnd_j].block(4*nb_ev*t_0 + order_dirac(op.id, block_dil) *
-                     nb_ev, Q2_size*t + col*dilE, nb_ev, dilE);
+//                     nb_ev, Q2_size*t + col*dilE, nb_ev, dilE);
+                     nb_ev, Q2_size*t, nb_ev, 4*dilE);
+
           }}//dilution ends here
         }// loop over t ends here
-     }}}// loop over rnd ends here
+     }}// loop over rnd ends here
     }//loop operators
   }// loops over t_0 ends here
   }// pragma omp ends
@@ -454,7 +467,7 @@ void BasicOperator::init_operator_d(const char dilution,
   {
 //  Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(Q2_size, 4 * nb_ev);
   #pragma omp for schedule(dynamic)
-  for(int t_0 = 0; t_0 < Lt; t_0++){
+  for(int t_0 = 0; t_0 < Lt/dilT; t_0++){
 
     if(omp_get_thread_num() == 0)
       std::cout << "\tcomputing single quarkline: " 
@@ -465,8 +478,7 @@ void BasicOperator::init_operator_d(const char dilution,
 
       for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
       for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
-      if(rnd_i != rnd_j){
-        for(int t = 0; t < Lt/dilT; t++){
+        for(int t = 0; t < Lt; t++){
           // new momentum -> recalculate M[0]
           // M only depends on momentum and displacement. first_vdv 
           // prevents repeated calculation for different gamma structures
@@ -476,18 +488,27 @@ void BasicOperator::init_operator_d(const char dilution,
             cmplx value = 1.;
             value_dirac(op.id, block_dil, value);
 
-            for(size_t col = 0; col < 4; col++){
+//            for(size_t col = 0; col < 4; col++){
 
               Q1_d[t_0][t][op.id][rnd_i][rnd_j]
-                  .block(block_dil*dilE, col*dilE, dilE, dilE) += value * 
-                (peram[rnd_i].block(4*nb_ev*t + block_dil *
-                  nb_ev, Q2_size*t_0 + order_dirac(op.id, col)*dilE, 
-                  nb_ev, dilE)).adjoint() *
-                vdaggerv.return_vdaggervr(op.id_rvdvr, t_0, rnd_j).block(0, 
-                  order_dirac(op.id, block_dil)*dilE, nb_ev, dilE);
-          }}//dilution ends here
+                  .block(0, block_dil*dilE, 4*dilE, dilE) += value * 
+                (peram[rnd_i].block(4*nb_ev*t + order_dirac(op.id, block_dil) *
+//                  nb_ev, Q2_size*t_0 + order_dirac(op.id, col)*dilE, 
+                  nb_ev, Q2_size*t_0 , 
+                  nb_ev, 4*dilE)).adjoint() *
+                vdaggerv.return_vdaggervr(op.id_rvdvr, t, rnd_j).block(0, 
+//                  order_dirac(op.id, block_dil)*dilE, nb_ev, dilE);
+                  block_dil*dilE, nb_ev, dilE);
+
+          }//dilution ends here
+
+          for(size_t row = 0; row < 4; row++)
+          for(size_t col = 0; col < 4; col++)
+            if( ((row + col) == 3) || (abs(row - col) > 1) )
+              Q1_d[t_0][t][op.id][rnd_i][rnd_j]
+                .block(row*dilE, col*dilE, dilE, dilE) *= -1.;
         }// loop over t ends here
-     }}}// loop over rnd ends here
+     }}// loop over rnd ends here
     }//loop operators
   }// loops over t_0 ends here
   }// pragma omp ends

@@ -28,8 +28,11 @@ LapH::Correlators::Correlators() : basic(), peram(), rnd_vec(), vdaggerv(),
 
   //TODO: size of C4_mes and C2_mes must be replaced by size of corresponding
   //operator lists. Momentary values are upper limit
+  C3_mes.resize(boost::extents[nb_op_4pt][Lt]);
   C4_mes.resize(boost::extents[nb_op_4pt][Lt]);
   C2_mes.resize(boost::extents[nb_op_2pt][Lt]);
+  Q1_u_trace.resize(boost::extents[nb_op][Lt][nb_rnd]);
+  Q1_d_trace.resize(boost::extents[nb_op][Lt][nb_rnd]);
   Q2_trace.resize(boost::extents[nb_op][nb_op][Lt][Lt][nb_rnd][nb_rnd]);
   Q2_trace_uncharged.resize(boost::extents[nb_op][nb_op][Lt][Lt][nb_rnd][nb_rnd]);
 }
@@ -54,23 +57,27 @@ void LapH::Correlators::compute_correlators(const size_t config_i){
   LapH::CrossOperator X(2);
 
   basic.init_operator('b', vdaggerv, peram);
+//  basic.init_operator_u('b', vdaggerv, peram);
+  basic.init_operator_d('b', vdaggerv, peram);
 //  basic.init_operator_uncharged('b', vdaggerv, peram);
 
   // computing the meson correlator which can be used to compute all small
   // trace combinations for 2pt and 4pt functions
-  build_Q2_trace();
+//  build_Q2_trace();
 
   // computing the meson 4pt big cross trace
   // TODO: if condition that at least four random vectos are needed
-  compute_meson_4pt_cross_trace(X);
+  compute_meson_3pt_cross_trace(X);
+//  compute_meson_4pt_cross_trace(X);
 
   write_C4_3(config_i);
-  build_and_write_2pt(config_i);
-  build_and_write_C4_1(config_i);
-  build_and_write_C4_2(config_i);
-
-//  build_Q2_trace_uncharged();
 //  build_and_write_2pt(config_i);
+//  build_and_write_C4_1(config_i);
+//  build_and_write_C4_2(config_i);
+
+  build_Q1_trace();
+//  build_Q2_trace_uncharged();
+  build_and_write_2pt(config_i);
 }
 /******************************************************************************/
 /******************************************************************************/

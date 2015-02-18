@@ -37,12 +37,13 @@ void LapH::CrossOperator::construct(const BasicOperator& basic,
 
   const indexlist_3 rnd_vec_index = global_data->get_rnd_vec_3pt();
   
-  if(not ((nb == 0) || (nb == 1))){
+  if(not ((nb == 0) || (nb == 2) || (nb == 3) || (nb == 4))){
     std::cout << "\tIn LapH::CrossOperator::construct: nb must be 0 or 1" 
               << std::endl;
     exit(0);
   }
 
+  //TODO implement cases 0, 2, 3, 4 in correspondence to type of Q2
   size_t tu, td, t2;
   // case second visited sink index is larger than first one
   if(type == 0){
@@ -54,7 +55,7 @@ void LapH::CrossOperator::construct(const BasicOperator& basic,
     t2 = (t_sink + 1)%Lt;
   }
   // case second visited sink index is smaller than first one
-  else{
+  else if(type == 2){
     t2 = (t_sink + 1)%Lt;
     tu = (t2/dilT);
     if (tu == t_sink/dilT)
@@ -63,6 +64,17 @@ void LapH::CrossOperator::construct(const BasicOperator& basic,
       td = 0;
     t2 = t_sink;
   }
+  
+  else if(type == 3){
+    tu = t_sink/dilT;
+    td = 3;
+    t2 = (t_source + Lt - 1)%Lt;
+  }
+  else {
+    tu = t_sink/dilT;
+    td = 4;
+    t2 = (t_source + 1)%Lt;
+  }
 
 #pragma omp parallel
 #pragma omp single
@@ -70,8 +82,10 @@ void LapH::CrossOperator::construct(const BasicOperator& basic,
   for(const auto& op : op_C4_IO){
   for(const auto& i : op.index_pt){
 
-    size_t id_Q2 = op_C4[i].index_Q2[nb];
-    size_t id_Corr = op_C4[i].index_Corr[nb];
+//    size_t id_Q2 = op_C4[i].index_Q2[nb];
+    size_t id_Q2 = op_C4[i].index_Q2[1];
+//    size_t id_Corr = op_C4[i].index_Corr[nb];
+    size_t id_Corr = op_C4[i].index_Q2[0];
 
     #pragma omp task shared (op)
     for(auto& rnd_it : rnd_vec_index) {
@@ -119,8 +133,8 @@ void LapH::CrossOperator::compute_X(const BasicOperator& basic,
 
     X.block(0, block*dilE, 4*dilE, dilE) = 
       value * Q2.block(0, block*dilE, 4*dilE, dilE) * 
-      rVdaggerVr.block(basic.order_dirac(id_Corr, block)*dilE, block*dilE,
-//          basic.order_dirac(id_Corr, block)*dilE, 
+      rVdaggerVr.block(block*dilE,
+basic.order_dirac(id_Corr, block)*dilE, 
           dilE, dilE);
 
     }// loop block ends here

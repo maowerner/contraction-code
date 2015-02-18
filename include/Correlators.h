@@ -36,7 +36,10 @@ private:
   std::vector<LapH::RandomVector> rnd_vec;
   LapH::VdaggerV vdaggerv;
   array_cd_d2 C4_mes;
+  array_cd_d2 C3_mes;
   array_cd_d2 C2_mes;
+  array_cd_d3 Q1_u_trace;
+  array_cd_d3 Q1_d_trace;
   array_cd_d6 Q2_trace;
   array_cd_d6 Q2_trace_uncharged;
 
@@ -51,8 +54,10 @@ private:
                                   const Eigen::MatrixXcd& Q2,
                                   const Eigen::MatrixXcd& rVdaggerVr, 
                                   cmplx& Q2_trace);
+  void compute_meson_3pt_cross_trace(LapH::CrossOperator& X);
   void compute_meson_4pt_cross_trace(LapH::CrossOperator& X);
 
+  void build_Q1_trace();
   void build_Q2_trace();
   void build_Q2_trace_uncharged();
   void build_and_write_2pt(const size_t config_i);

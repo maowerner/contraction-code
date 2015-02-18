@@ -254,8 +254,8 @@ void init_lookup_C4I2plus_IO(const Correlator_list& correlator_list,
   std::array<int, 3> zero = {{0,0,0}};
 
   // init lookup_4pt_IO
-  for(const auto& corr : correlator_list){
-    if(corr.type.compare(0,5,"C4I2+") == 0){
+//  for(const auto& corr : correlator_list){
+//    if(corr.type.compare(0,5,"C4I2+") == 0){
       for(const auto& op_C4 : lookup_4pt){
         const pdg op1 = lookup_corr[op_C4.index_Q2[0]];
         const pdg op2 = lookup_corr[op_C4.index_Corr[0]];
@@ -270,19 +270,19 @@ void init_lookup_C4I2plus_IO(const Correlator_list& correlator_list,
 //            // enforce cm momentum conservation
 //            if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
             // only diagonal entries of the GEVP
-            if( abs_p3(op1) == abs_p3(op2) ){
+//            if( abs_p3(op1) == abs_p3(op2) ){
 
               index_IO_2 write;
               write.index_pt.emplace_back
                   (std::pair<size_t, size_t>(op_2pt_1.id, op_2pt_2.id));
               lookup_4pt_1_IO.push_back(write);
               lookup_4pt_2_IO.push_back(write);
-            }
+//            }
           }}
         }}
       }
-    }
-  }
+//    }
+//  }
 
   // doubly counted lookup_corr entries are deleted
   auto it1 = lookup_4pt_1_IO.begin();
@@ -408,12 +408,12 @@ void init_lookup_4pt(const Correlator_list& correlator_list,
           if(compare_quantum_numbers_of_pdg(op3, op3_from_list)){
           if(compare_quantum_numbers_of_pdg(op4, op4_from_list)){
             // only diagonal entries of the GEVP
-            if( abs_p3(op1) == abs_p3(op2) ){
+//            if( abs_p3(op1) == abs_p3(op2) ){
 
               index_IO_1 write;
               write.index_pt.emplace_back(op.id);
               lookup_4pt_3_IO.push_back(write);
-            }
+//            }
           }}}}
         }
       }}}}
