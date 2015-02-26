@@ -163,10 +163,10 @@ void convert_hadron_to_vec(const io_list& op_io, const array_cd_d2& C2_mes,
         C2_mes[op.id].size());
 
     if( (corr_type == "C2+") || (corr_type == "C4I2+_1") || (corr_type == "C4I2+_2") ){
-      set_tag(tags[op.id], i, lookup_2pt);
+      set_tag(tags[op.id], op.id, lookup_2pt);
     }
     else if( corr_type == "C4I2+_3"){
-      set_tag(tags[op.id], i, lookup_4pt);
+      set_tag(tags[op.id], op.id, lookup_4pt);
     }
   }}
 }

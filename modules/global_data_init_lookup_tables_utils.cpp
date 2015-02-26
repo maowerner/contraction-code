@@ -16,8 +16,6 @@ static void copy_quantum_numbers(const pdg& in, std::array<int, 6>& out){
   out[5] = in.p3[2];
 }
 
-
-
 } // end of unnamed namespace
 
 namespace global_data_utils {
@@ -37,6 +35,16 @@ int abs_p3(const pdg& in){
   int result = 0;
   for(size_t i = 0; i < 3; i++){
     result += in.p3[i] * in.p3[i];
+  }
+
+  return result;
+}
+
+int abs_p3(const std::array<int, 3> in){
+
+  int result = 0;
+  for(size_t i = 0; i < 3; i++){
+    result += in[i] * in[i];
   }
 
   return result;
@@ -251,7 +259,7 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
   for(auto& op_vdv : lookup_vdv){
     op_vdv.id = counter;
     for(const auto& op : lookup_corr){
-      if((counter == op.id_vdv) && (op.first_vdv == true) )
+      if((counter == op.id_vdv) && (op.first_vdv == true) && (op.negative_momentum == false) )
         op_vdv.index = op.id;
     }
     counter++;
@@ -271,7 +279,7 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
         // adjoint has been taken
         if(op.negative_momentum == true){
           op_rvdvr.adjoint = true;
-          op_rvdvr.id_adjoint = op.id_vdv;
+          op_rvdvr.id_adjoint = lookup_corr[lookup_vdv[op.id_vdv].index].id_rvdvr;
         }
         else{
           op_rvdvr.adjoint = false;
@@ -312,6 +320,49 @@ void set_index_2pt(const Operators& in1, const Operators& in2,
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+void set_index_3pt(const Operators& in1, const Operators& in2, 
+                   const Operators& in3, const vec_pdg_Corr& lookup_corr, 
+                   vec_index_3pt& lookup_3pt) {
+
+  std::array<int, 3> zero = {{0, 0, 0}};
+
+  index_3pt write;
+
+  for(const auto& op1 : lookup_corr){
+  if(compare_quantum_numbers_of_pdg(op1, in1)){
+    for(const auto& op2 : lookup_corr){
+    if(compare_quantum_numbers_of_pdg(op2, in2)){
+      for(const auto& op3 : lookup_corr){
+      if(compare_quantum_numbers_of_pdg(op3, in3)){
+
+        // enforce cm momentum conservation
+//        if( (add_p3(op1, op3) == zero) && (abs_p3(op2) == 0) ){
+          
+          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+          if( (abs_p3(add_p3(op1, op3)) == 1) && 
+              (op2_p3 == add_p3(op1, op3)) ){
+
+//          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//          if( (((abs_p3(op1) == 2) && (abs_p3(op3) == 0)) || 
+//              ((abs_p3(op1) == 0) && (abs_p3(op3) == 2))) &&
+//              (op2_p3 == add_p3(op1, op3)) ){
+
+          write.index_Q2[0] = op1.id;
+          write.index_Corr  = op2.id;
+          write.index_Q2[1] = op3.id;
+
+          lookup_3pt.push_back(write);
+        }
+//        }
+
+      }} //loops over sink end here
+    }}
+  }} //loops over source end here
+
+}
+// *****************************************************************************
+// *****************************************************************************
+// *****************************************************************************
 void set_index_4pt(const Operators& in1, const Operators& in2, 
                    const Operators& in3, const Operators& in4,
                    const vec_pdg_Corr& lookup_corr, vec_index_4pt& lookup_4pt) {
@@ -330,7 +381,20 @@ void set_index_4pt(const Operators& in1, const Operators& in2,
         if(compare_quantum_numbers_of_pdg(op4, in4)){
 
           // enforce cm momentum conservation
-          if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
+//          if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
+
+          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
+          if( (abs_p3(add_p3(op1, op3)) == 1) && (abs_p3(add_p3(op2, op4)) == 1)
+              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
+
+//          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
+//          if( (((abs_p3(op1) == 2) && (abs_p3(op3) == 0)) || 
+//              ((abs_p3(op1) == 0) && (abs_p3(op3) == 2))) &&
+//              (((abs_p3(op2) == 2) && (abs_p3(op4) == 0)) || 
+//              ((abs_p3(op2) == 0) && (abs_p3(op4) == 2)))
+//              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
 
             write.index_Q2[0]   = op1.id;
             write.index_Corr[0] = op2.id;

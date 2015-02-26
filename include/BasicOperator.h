@@ -25,6 +25,10 @@ public:
                      const LapH::VdaggerV& vdaggerv,
                      const LapH::Perambulator& peram);
 
+  void init_operator_verbose(const char dilution, 
+                     const LapH::VdaggerV& vdaggerv,
+                     const LapH::Perambulator& peram);
+
   void init_operator_u(const char dilution, 
                      const LapH::VdaggerV& vdaggerv,
                      const LapH::Perambulator& peram);
@@ -67,6 +71,7 @@ public:
 
 private:
   array_Xcd_d6_eigen Q2;
+  array_Xcd_d6_eigen Q2_verbose;
   array_Xcd_d5_eigen Q1_u;
   array_Xcd_d5_eigen Q1_d;
 

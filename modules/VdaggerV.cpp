@@ -103,7 +103,7 @@ void LapH::VdaggerV::build_vdaggerv (const int config_i) {
   const size_t Lt = global_data->get_Lt();
   const size_t dim_row = global_data->get_dim_row();
   const size_t nb_ev = global_data->get_number_of_eigen_vec();
-  const size_t id_unity = global_data->get_index_of_unity();
+  const int id_unity = global_data->get_index_of_unity();
 
   const vec_pd_VdaggerV op_VdaggerV = global_data->get_lookup_VdaggerV();
 
@@ -249,6 +249,16 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
     if(op.adjoint == true){
 
       for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
+
+        for(size_t block = 0; block < 4; block++){
+
+          rvdaggerv[op.id][t][rnd_i].block(0, block*nb_ev, dilE, nb_ev) = 
+            (vdaggervr[op.id_adjoint][t][rnd_i].block(0, block*dilE, nb_ev, dilE)).adjoint();
+          vdaggervr[op.id][t][rnd_i].block(0, block*dilE, nb_ev, dilE) = 
+            (rvdaggerv[op.id_adjoint][t][rnd_i].block(0, block*nb_ev, dilE, nb_ev)).adjoint();
+
+        }
+
       for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j){
       if(rnd_i != rnd_j){
 
@@ -257,8 +267,8 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
         // vector of blocks. To reproduce the correct behavior under adjoining, 
         // the blocks have to be adjoined seperately.
         // is .adjoint().transpose() faster?
-          rvdaggervr[op.id][t][rnd_j][rnd_i] =
-            rvdaggervr[op.id_adjoint][t][rnd_i][rnd_j].adjoint();
+        rvdaggervr[op.id][t][rnd_j][rnd_i] =
+          rvdaggervr[op.id_adjoint][t][rnd_i][rnd_j].adjoint();
       }}}// loops over rnd vecs
 
     }

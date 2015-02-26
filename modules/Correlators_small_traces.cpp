@@ -40,8 +40,8 @@ void LapH::Correlators::build_Q1_trace(){
           // Corr = tr(D_d^-1(t_sink) Gamma D_u^-1(t_source) Gamma)
           // TODO: Just a workaround
           
-          Q1_u_trace[op.id][t][rnd_it] = 
-           (basic.get_operator_u(t, t/dilT, op.id, rnd_it, rnd_it)).trace();
+//          Q1_u_trace[op.id][t][rnd_it] = 
+//           (basic.get_operator_u(t, t/dilT, op.id, rnd_it, rnd_it)).trace();
           Q1_d_trace[op.id][t][rnd_it] = 
             (basic.get_operator_d(t/dilT, t, op.id, rnd_it, rnd_it)).trace();
 
@@ -171,14 +171,11 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
           // Corr = tr(D_d^-1(t_sink) Gamma D_u^-1(t_source) Gamma)
           // TODO: Just a workaround
           
-          if(t_sink == 0 && t_source == 0)
-            std::cout << rnd_it.first << "\t" << rnd_it.second << std::endl;
-
           Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd_it.first]
               [rnd_it.second] =
-            (basic.get_operator_u(t_source, t_sink/dilT, id_Q2, 
+            (basic.get_operator_d(t_source/dilT, t_sink, id_Q2, 
               rnd_it.first, rnd_it.second) * 
-            basic.get_operator_u(t_sink, t_source/dilT, id_Corr, 
+            basic.get_operator_d(t_sink/dilT, t_source, id_Corr, 
               rnd_it.second, rnd_it.first)).trace();
 
         } // Loop over random vectors ends here! 
@@ -271,8 +268,7 @@ void LapH::Correlators::build_and_write_2pt(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C2_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] += 
-//           Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
-           Q1_d_trace[id_Q2][t_source][rnd.first] * Q1_d_trace[id_Corr][t_sink][rnd.second];
+           Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
       } //Loop over random vectors
     }}//Loops over all Quantum numbers
   }}//Loops over time
@@ -288,7 +284,7 @@ void LapH::Correlators::build_and_write_2pt(const size_t config_i){
   // attributes  - vector of tags containing quantum numbers for each correlator
   // correlators - vector of correlators
 
-  sprintf(outfile, "%s/C2_d_conf%04d.dat", outpath.c_str(), (int)config_i);
+  sprintf(outfile, "%s/C2_rho_conf%04d.dat", outpath.c_str(), (int)config_i);
   export_corr_IO(outfile, op_C2_IO, "C2+", C2_mes);
 
   time = clock() - time;

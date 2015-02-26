@@ -242,7 +242,7 @@ BasicOperator::BasicOperator() : gamma(), Q2() {
   for(int i = 0; i < 16; ++i)
     create_gamma(gamma, i);
 
-  Q2.resize(boost::extents[Lt][Lt/dilT][5][nb_op][nb_rnd][nb_rnd]);
+  Q2.resize(boost::extents[Lt][Lt/dilT][7][nb_op][nb_rnd][nb_rnd]);
   std::fill(Q2.data(), Q2.data() + Q2.num_elements(), 
             Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
 
@@ -255,6 +255,115 @@ BasicOperator::BasicOperator() : gamma(), Q2() {
             Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
 
   std::cout << "\tallocated memory in BasicOperator" << std::endl;
+}
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+void BasicOperator::init_operator_verbose(const char dilution,
+                                  const LapH::VdaggerV& vdaggerv, 
+                                  const LapH::Perambulator& peram){
+
+  const int Lt = global_data->get_Lt();
+  const size_t nb_ev = global_data->get_number_of_eigen_vec();
+  const std::vector<quark> quarks = global_data->get_quarks();
+  const size_t nb_rnd = quarks[0].number_of_rnd_vec;
+  const size_t dilE = quarks[0].number_of_dilution_E;
+  const int dilT = quarks[0].number_of_dilution_T;
+  const size_t Q2_size = 4 * dilE;
+  
+  const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
+
+  const size_t nb_op = op_Corr.size();
+
+  std::cout << "\n" << std::endl;
+  clock_t time = clock();
+  #pragma omp parallel 
+  {
+  Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(Q2_size, 4 * nb_ev);
+  #pragma omp for schedule(dynamic)
+  for(int t_0 = 0; t_0 < Lt; t_0++){
+
+    if(omp_get_thread_num() == 0)
+      std::cout << "\tcomputing double quarkline: " 
+                << std::setprecision(2) << (float) t_0/Lt*100 << "%\r" 
+                << std::flush;
+
+    for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
+
+          // ti denotes times of Quarkline:
+          // 5 - t_0 -> t_0-1 -> t  I=1   3pt,4pt
+          // 6 - t_0 -> t_0+1 -> t  I=1   3pt,4pt
+          for(int ti = 5; ti < 7; ti++){
+          // getting the neighbour blocks
+            int tend;
+              tend = ((Lt + t_0 + 2*(5-ti) + 1)%Lt)/dilT;
+
+        for(const auto& op : op_Corr){
+          // new momentum -> recalculate M[0]
+          // M only depends on momentum and displacement. first_vdv 
+          // prevents repeated calculation for different gamma structures
+          if(op.first_vdv == true){
+
+            for(size_t col = 0; col < 4; ++col) {
+            for(size_t row = 0; row < 4; ++row) {
+              if(op.negative_momentum == false){
+                M.block(dilE * col, nb_ev * row, dilE, nb_ev) = 
+                  (peram[rnd_i].block(nb_ev * (4 * t_0 + row), 
+                                      dilE * (4 * tend + col), 
+                                      nb_ev, dilE)).adjoint() *
+                  vdaggerv.return_vdaggerv(op.id_vdv, t_0);
+              }
+              else {
+                M.block(dilE * col, nb_ev * row, dilE, nb_ev) = 
+                  (peram[rnd_i].block(nb_ev * (4 * t_0 + row), 
+                                      dilE * (4 * tend + col), 
+                                      nb_ev, dilE)).adjoint() *
+                  // TODO: calculate V^daggerV Omega from op.negative_momentum 
+                  // == false and multiply Omega from the left
+                  // and then (V^daggerV Omega)^dagger * Omega
+                  (vdaggerv.return_vdaggerv(op.id_vdv, t_0)).adjoint();
+              }  
+
+              // gamma_5 trick. It changes the sign of the two upper right and two
+              // lower left blocks in dirac space
+              if( ((row + col) == 3) || (abs(row - col) > 1) )
+                M.block(dilE * col, row * nb_ev, dilE, nb_ev) *= -1.;
+            }}// loops over row and col end here
+          }//if over same gamma structure ends here
+
+      for(int t = 0; t < Lt/dilT; t++){
+          for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
+            if(rnd_i != rnd_j){
+
+              //dilution of d-quark from left
+              for(size_t block_dil = 0; block_dil < 4; block_dil++){
+                cmplx value = 1.;
+                value_dirac(op.id, block_dil, value);
+
+                  for(size_t row = 0; row < 4; row++){
+                  for(size_t col = 0; col < 4; col++){
+
+                    Q2[t_0][t][ti][op.id][rnd_i][rnd_j]
+                        .block(row*dilE, col*dilE, dilE, dilE) += value *
+                      M.block(row*dilE, order_dirac(op.id, block_dil)* nb_ev, dilE, nb_ev) * 
+                      peram[rnd_j]
+                        .block(4*nb_ev*t_0 + block_dil*nb_ev, 
+                          Q2_size*t + col*dilE, nb_ev, dilE);
+
+              }}}//dilution ends here
+
+          }}}// loops over rnd_j and ti block end here 
+        }//loop operators
+      }// loop over t ends here
+    }// loop over rnd_i ends here
+  }// loops over t_0 ends here
+  }// pragma omp ends
+
+  std::cout << "\tcomputing double quarkline: 100.00%" << std::endl;
+  time = clock() - time;
+  std::cout << "\t\tSUCCESS - " << ((float) time) / CLOCKS_PER_SEC 
+            << " seconds" << std::endl;
 }
 
 /******************************************************************************/
@@ -331,14 +440,13 @@ void BasicOperator::init_operator(const char dilution,
           // 2 - t -> t_0 -> t+1    I=2   4pt
           // 3 - t -> t_0 -> t_0-1  I=1   3pt,4pt
           // 4 - t -> t_0 -> t_0+1  I=1   3pt,4pt
-          for(int ti = 0; ti < 5; ti++){
+          for(int ti = 1; ti < 5; ti++){                                        //!!!!!!!!!!!!1
+            if(ti != 2){
           // getting the neighbour blocks
             int tend;
             if(ti < 3)
-              //(tend = t+ti-1)/dilT also working?? 
               tend = (Lt/dilT+t + ti - 1)%(Lt/dilT);  
             else
-//              tend = (Lt/dilT+t_0 + 2*(ti-3) - 1)%(Lt/dilT);
               tend = ((Lt + t_0 + 2*(ti-3) - 1)%Lt)/dilT;
           for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
             if(rnd_i != rnd_j){
@@ -358,7 +466,7 @@ void BasicOperator::init_operator(const char dilution,
                         .block(4*nb_ev*t_0 + block_dil*nb_ev, 
                           Q2_size*tend + col*dilE, nb_ev, dilE);
 
-              }}}//dilution ends here
+              }}}}//dilution ends here
 
           }}}// loops over rnd_j and ti block end here 
         }//loop operators
@@ -419,17 +527,25 @@ void BasicOperator::init_operator_u(const char dilution,
             cmplx value = 1.;
             value_dirac(op.id, block_dil, value);
 
-            for(size_t col = 0; col < 4; col++){
+//            for(size_t col = 0; col < 4; col++){
+
+//               Q1_u[t_0][t][op.id][rnd_i][rnd_j]
+//                   .block(block_dil*dilE, 0, dilE, 4*dilE) += value * 
+//                 vdaggerv.return_rvdaggerv(op.id_rvdvr, t_0, rnd_i).block(0, 
+//                     block_dil* nb_ev, dilE, nb_ev) * 
+//                 peram[rnd_j].block(4*nb_ev*t_0 + order_dirac(op.id, block_dil) *
+////                     nb_ev, Q2_size*t + col*dilE, nb_ev, dilE);
+//                     nb_ev, Q2_size*t, nb_ev, 4*dilE);
 
                Q1_u[t_0][t][op.id][rnd_i][rnd_j]
-                   .block(block_dil*dilE, 0, dilE, 4*dilE) += value * 
+                   .block(order_dirac(op.id, block_dil)*dilE, 0, dilE, 4*dilE) += value * 
                  vdaggerv.return_rvdaggerv(op.id_rvdvr, t_0, rnd_i).block(0, 
-                     block_dil* nb_ev, dilE, nb_ev) * 
-                 peram[rnd_j].block(4*nb_ev*t_0 + order_dirac(op.id, block_dil) *
+                     order_dirac(op.id, block_dil)* nb_ev, dilE, nb_ev) * 
+                 peram[rnd_j].block(4*nb_ev*t_0 + block_dil *
 //                     nb_ev, Q2_size*t + col*dilE, nb_ev, dilE);
                      nb_ev, Q2_size*t, nb_ev, 4*dilE);
 
-          }}//dilution ends here
+          }//dilution ends here
         }// loop over t ends here
      }}// loop over rnd ends here
     }//loop operators

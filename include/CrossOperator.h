@@ -22,11 +22,18 @@ public:
   CrossOperator(const size_t number);
   ~CrossOperator() {};
 
+  void construct_3pt(const BasicOperator& basic, const VdaggerV& vdaggerv, 
+                 const size_t nb, const int t_source, const int t_sink,
+                 const size_t type);
+
   void construct(const BasicOperator& basic, const VdaggerV& vdaggerv, 
                  const size_t nb, const int t_source, const int t_sink,
                  const size_t type);
 
   void compute_X(const BasicOperator& basic, const size_t id_si, 
+                 const Eigen::MatrixXcd& Q2, const Eigen::MatrixXcd& VdaggerV, 
+                 Eigen::MatrixXcd& X);
+  void compute_X_verbose(const BasicOperator& basic, const size_t id_si, 
                  const Eigen::MatrixXcd& Q2, const Eigen::MatrixXcd& VdaggerV, 
                  Eigen::MatrixXcd& X);
 
