@@ -62,10 +62,12 @@ private:
   vec_index_4pt lookup_4pt;
 
   vec_index_IO_1 lookup_2pt_IO;
+  vec_index_IO_1 lookup_c2zero_IO;
   vec_index_IO_1 lookup_3pt_IO;
   vec_index_IO_2 lookup_4pt_1_IO;
   vec_index_IO_2 lookup_4pt_2_IO;
   vec_index_IO_1 lookup_4pt_3_IO;
+  vec_index_IO_1 lookup_c4i10_IO;
 
   vec_pd_VdaggerV lookup_vdv;
   vec_pd_rVdaggerVr lookup_rvdvr;
@@ -173,6 +175,9 @@ public:
   inline const vec_index_IO_1& get_lookup_2pt_IO() {
     return lookup_2pt_IO;
   }
+  inline const vec_index_IO_1& get_lookup_c2zero_IO() {
+    return lookup_c2zero_IO;
+  }
   inline const vec_index_IO_1& get_lookup_3pt_IO() {
     return lookup_3pt_IO;
   }
@@ -184,6 +189,9 @@ public:
   }
   inline const vec_index_IO_1& get_lookup_4pt_3_IO() {
     return lookup_4pt_3_IO;
+  }
+  inline const vec_index_IO_1& get_lookup_c4i10_IO() {
+    return lookup_c4i10_IO;
   }
   inline const indexlist_1& get_rnd_vec_1pt() {
     return rnd_vec_1pt;

@@ -107,7 +107,9 @@ void LapH::CrossOperator::construct_3pt(const BasicOperator& basic,
 /******************************************************************************/
 /******************************************************************************/
 void LapH::CrossOperator::construct(const BasicOperator& basic, 
-                                    const VdaggerV& vdaggerv, const size_t nb,
+                                    const VdaggerV& vdaggerv, 
+                                    const vec_index_IO_1& op_C4_IO, 
+                                    const size_t nb,
                                     const int t_source, const int t_sink,
                                     const size_t type){
 
@@ -118,7 +120,6 @@ void LapH::CrossOperator::construct(const BasicOperator& basic,
 
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   const vec_index_4pt op_C4 = global_data->get_lookup_4pt_trace();
-  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_4pt_3_IO();
 
   const indexlist_3 rnd_vec_index = global_data->get_rnd_vec_3pt();
   

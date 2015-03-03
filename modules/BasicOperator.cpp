@@ -605,7 +605,6 @@ void BasicOperator::init_operator_d(const char dilution,
             value_dirac(op.id, block_dil, value);
 
 //            for(size_t col = 0; col < 4; col++){
-
               Q1_d[t_0][t][op.id][rnd_i][rnd_j]
                   .block(0, block_dil*dilE, 4*dilE, dilE) += value * 
                 (peram[rnd_i].block(4*nb_ev*t + order_dirac(op.id, block_dil) *

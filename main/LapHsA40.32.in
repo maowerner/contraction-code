@@ -7,8 +7,8 @@ Ly = 32
 Lz = 32  
 
 # configuration handling:
-start_config = 200
-end_config   = 1200
+start_config = 1188
+end_config   = 1188
 delta_config = 4
 
 # eigenvector handling:
@@ -38,21 +38,23 @@ operator_list = g3.d0.p0
 operator_list = g5.d0.p(0,0,-1):g5.d0.p(0,0,1)
 operator_list = g5.d0.p(0,0,1)
 operator_list = g4.d0.p0
-operator_list = g5.d0.p1
+operator_list = g5.d0.p0,1
+operator_list = g1.d0.p(1,0,0):g1.d0.p(-1,0,0):g2.d0.p(0,1,0):g2.d0.p(0,-1,0):g3.d0.p(0,0,1):g3.d0.p(0,0,-1)
 operator_list = g5.d0.p0
 operator_list = g6.d0.p0
 
 # all correlation functions which will be computed !!MUST BE AT END OF FILE!!
 [correlator_lists]
-correlator_list = C2+:Q0:Op0:Q0:Op0
-correlator_list = C2+:Q0:Op3:Q0:Op3
-correlator_list = C2+:Q0:Op6:Q0:Op6
-correlator_list = C2+:Q0:Op11:Q0:Op11
+#correlator_list = C2+:Q0:Op0:Q0:Op0
+#correlator_list = C2+:Q0:Op3:Q0:Op3
+#correlator_list = C2+:Q0:Op6:Q0:Op6
+correlator_list = C20:Q0:Op11:Q0:Op11
 #correlator_list = C2+:Q0:Op4:Q0:Op4
 #correlator_list = C2+:Q0:Op5:Q0:Op5
 #correlator_list = C2+:Q0:Op6:Q0:Op6
-correlator_list = C3I10:Q0:Op1:Q0:Op0:Q0:Op1
-correlator_list = C3I10:Q0:Op4:Q0:Op3:Q0:Op4
-correlator_list = C3I10:Q0:Op7:Q0:Op6:Q0:Op7
-correlator_list = C4I2+:Q0:Op10:Q0:Op10:Q0:Op10:Q0:Op10
+#correlator_list = C3I10:Q0:Op10:Q0:Op10:Q0:Op10
+#correlator_list = C3I10:Q0:Op1:Q0:Op0:Q0:Op1
+#correlator_list = C3I10:Q0:Op4:Q0:Op3:Q0:Op4
+correlator_list = C3I10:Q0:Op10:Q0:Op11:Q0:Op10
+correlator_list = C4I10:Q0:Op10:Q0:Op10:Q0:Op10:Q0:Op10
 

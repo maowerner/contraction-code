@@ -185,6 +185,7 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
       op.first_vdv = true;
       op.negative_momentum = false;
       size_t fast_counter_vdv = 0;// this gives the Op id if QN are duplicate
+
       // first check for duplicate quantum numbers
       for(const auto& vdv : vdaggerv_qu_nb){
         if(vdv == write){
@@ -193,7 +194,9 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
         }
         fast_counter_vdv++;
       }
-      if(!is_known_vdv){ // second check for complex conjugate momenta
+
+      // second check for complex conjugate momenta
+      if(!is_known_vdv){ 
         fast_counter_vdv = 0;
         for(size_t i = 3; i < 6; i++)
           write[i] *= -1;
@@ -231,9 +234,9 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
         }
       }
       // case same quantum numbers already exist. 
-      // TODO: I don't think that works if several negative momenta exist.
+      // TODO: I don't think that works for displacements
       else{
-        op.negative_momentum = lookup_corr[fast_counter_vdv].negative_momentum;
+        op.negative_momentum = lookup_corr[op.id-1].negative_momentum;
         op.id_vdv = fast_counter_vdv;
         op.first_vdv = false;
       }

@@ -69,11 +69,12 @@ private:
   void build_Q2_trace_uncharged();
 
   void build_and_write_2pt(const size_t config_i);
+  void build_and_write_c2zero(const size_t config_i);
   void build_and_write_C4_1(const size_t config_i);
   void build_and_write_C4_2(const size_t config_i);
 
-  void compute_meson_3pt_cross_trace(LapH::CrossOperator& X);
-  void compute_meson_3pt_cross_trace_verbose(LapH::CrossOperator& X);
+  void compute_meson_3pt_trace(LapH::CrossOperator& X);
+  void compute_meson_3pt_trace_verbose(LapH::CrossOperator& X);
   void compute_meson_4pt_cross_trace(LapH::CrossOperator& X);
   void compute_meson_4pt_box_trace(LapH::CrossOperator& X);
 

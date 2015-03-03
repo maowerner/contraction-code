@@ -268,6 +268,75 @@ void LapH::Correlators::build_and_write_2pt(const size_t config_i){
 
       for(const auto& rnd : rnd_vec_index) {
         C2_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] += 
+           Q2_trace[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
+      } //Loop over random vectors
+    }}//Loops over all Quantum numbers
+  }}//Loops over time
+
+  // normalization of correlation function
+  for(auto i = C2_mes.data(); i < (C2_mes.data()+C2_mes.num_elements()); i++)
+    *i /= norm1;
+
+  // output to lime file
+  // outfile     - filename
+  // run_id      - first message with runinfo specific for each run of the 
+  //               program
+  // attributes  - vector of tags containing quantum numbers for each correlator
+  // correlators - vector of correlators
+
+  sprintf(outfile, "%s/C2_pi+-_conf%04d.dat", outpath.c_str(), (int)config_i);
+  export_corr_IO(outfile, op_C2_IO, "C2+", C2_mes);
+
+  time = clock() - time;
+  std::cout << "\t\tSUCCESS - " << ((float) time)/CLOCKS_PER_SEC 
+            << " seconds" << std::endl;
+}
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+
+// build 2pt-function C2_mes for pi^+ from Corr. Equivalent to just summing
+// up traces with same time difference between source and sink (all to all)
+// for every dirac structure, momentum, displacement
+void LapH::Correlators::build_and_write_c2zero(const size_t config_i){
+
+  std::cout << "\n\tcomputing the 2pt function:\r";
+  clock_t time = clock();
+
+  // global variables from input file needed here
+  const int Lt = global_data->get_Lt();
+
+  const vec_index_2pt op_C2 = global_data->get_lookup_2pt_trace();
+  const vec_index_IO_1 op_C2_IO = global_data->get_lookup_c2zero_IO();
+  const indexlist_2 rnd_vec_index = global_data->get_rnd_vec_2pt();
+
+  // compute the norm for 2pt functions
+  int norm = rnd_vec_index.size();
+  std::cout << "\n\tNumber of contraction combinations: " << norm << std::endl;
+  const double norm1 = Lt * norm;
+
+  char outfile[400];
+  FILE *fp = NULL;
+  std::string outpath = global_data->get_output_path() + "/" + 
+      global_data->get_name_lattice();
+
+  // setting the correlation function to zero
+  std::fill(C2_mes.origin(), C2_mes.origin() + C2_mes.num_elements() , 
+                                                            cmplx(0.0, 0.0));
+  if(op_C2_IO.size() == 0)
+    return;
+
+  for(int t_source = 0; t_source < Lt; ++t_source){
+  for(int t_sink = 0; t_sink < Lt; ++t_sink){
+
+    for(const auto& op : op_C2_IO) {
+    for(const auto& i : op.index_pt){
+      size_t id_Q2 = op_C2[i].index_Q2;
+      size_t id_Corr = op_C2[i].index_Corr;
+
+      for(const auto& rnd : rnd_vec_index) {
+        C2_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] += 
            Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd.first][rnd.second];
       } //Loop over random vectors
     }}//Loops over all Quantum numbers

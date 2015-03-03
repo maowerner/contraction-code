@@ -7,7 +7,7 @@ static GlobalData * const global_data = GlobalData::Instance();
 /******************************************************************************/
 /******************************************************************************/
 //TODO: Call that build_C3() ?
-void LapH::Correlators::compute_meson_3pt_cross_trace_verbose(LapH::CrossOperator& X) {
+void LapH::Correlators::compute_meson_3pt_trace_verbose(LapH::CrossOperator& X) {
 
   const int Lt = global_data->get_Lt();
   const std::vector<quark> quarks = global_data->get_quarks();
@@ -87,7 +87,7 @@ void LapH::Correlators::compute_meson_3pt_cross_trace_verbose(LapH::CrossOperato
 /******************************************************************************/
 /******************************************************************************/
 //TODO: Call that build_C3() ?
-void LapH::Correlators::compute_meson_3pt_cross_trace(LapH::CrossOperator& X) {
+void LapH::Correlators::compute_meson_3pt_trace(LapH::CrossOperator& X) {
 
   const int Lt = global_data->get_Lt();
   const std::vector<quark> quarks = global_data->get_quarks();
@@ -176,7 +176,7 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
   const int Lt = global_data->get_Lt();
 
   const vec_index_4pt op_C4 = global_data->get_lookup_4pt_trace();
-  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_4pt_3_IO();
+  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_c4i10_IO();
   const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_4pt();
   // TODO: must be changed in GlobalData {
   // TODO: }
@@ -193,8 +193,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       const int t_source = (t_sink + 1 + t)%Lt;
       const int t_source_1 = (t_source + 1) % Lt;
 
-        X.construct(basic, vdaggerv, 0, t_source_1, t_sink_1, 3);
-        X.construct(basic, vdaggerv, 1, t_sink, t_source, 4);
+        X.construct(basic, vdaggerv, op_C4_IO, 0, t_source_1, t_sink_1, 3);
+        X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink, t_source, 4);
 
       // The parallelisation is not done with #pragma omp for because it is 
       // incompatible with auto loops
@@ -233,8 +233,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       } // end parallel region
 
 
-      X.construct(basic, vdaggerv, 0, t_source, t_sink, 4);
-      X.construct(basic, vdaggerv, 1, t_sink_1, t_source_1, 3);
+      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source, t_sink, 4);
+      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink_1, t_source_1, 3);
       #pragma omp parallel
       #pragma omp single
       {
@@ -256,8 +256,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, 0, t_source_1, t_sink, 3);
-      X.construct(basic, vdaggerv, 1, t_sink_1, t_source, 3);
+      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source_1, t_sink, 3);
+      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink_1, t_source, 3);
       #pragma omp parallel
       #pragma omp single
       {
@@ -279,8 +279,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, 0, t_source, t_sink_1, 4);
-      X.construct(basic, vdaggerv, 1, t_sink, t_source_1, 4);
+      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source, t_sink_1, 4);
+      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink, t_source_1, 4);
       #pragma omp parallel
       #pragma omp single
       {
@@ -302,8 +302,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, 0, t_source, t_sink_1, 6);
-      X.construct(basic, vdaggerv, 1, t_sink_1, t_source, 5);
+      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source, t_sink_1, 6);
+      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink_1, t_source, 5);
       #pragma omp parallel
       #pragma omp single
       {
@@ -325,8 +325,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, 0, t_source_1, t_sink, 5);
-      X.construct(basic, vdaggerv, 1, t_sink, t_source_1, 6);
+      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source_1, t_sink, 5);
+      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink, t_source_1, 6);
       #pragma omp parallel
       #pragma omp single
       {
@@ -348,8 +348,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, 0, t_source, t_sink, 6);
-      X.construct(basic, vdaggerv, 1, t_sink, t_source, 6);
+      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source, t_sink, 6);
+      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink, t_source, 6);
       #pragma omp parallel
       #pragma omp single
       {
@@ -371,8 +371,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, 0, t_source_1, t_sink_1, 5);
-      X.construct(basic, vdaggerv, 1, t_sink_1, t_source_1, 5);
+      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source_1, t_sink_1, 5);
+      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink_1, t_source_1, 5);
       #pragma omp parallel
       #pragma omp single
       {
@@ -444,8 +444,8 @@ void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
 //      }
 //      else{
 //        if(t_source%2 == 0){
-          X.construct(basic, vdaggerv, 0, t_source,   t_sink, 2);
-          X.construct(basic, vdaggerv, 1, t_source_1, t_sink, 0);
+          X.construct(basic, vdaggerv, op_C4_IO, 0, t_source,   t_sink, 2);
+          X.construct(basic, vdaggerv, op_C4_IO, 1, t_source_1, t_sink, 0);
 //        }
 //        else{
 //          X.construct(basic, vdaggerv, 0, t_source,   t_sink, 0);
