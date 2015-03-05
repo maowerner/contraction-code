@@ -339,11 +339,11 @@ void set_index_3pt(const Operators& in1, const Operators& in2,
       if(compare_quantum_numbers_of_pdg(op3, in3)){
 
         // enforce cm momentum conservation
-//        if( (add_p3(op1, op3) == zero) && (abs_p3(op2) == 0) ){
+        if( (add_p3(op1, op3) == zero) && (abs_p3(op2) == 0) ){
           
-          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
-          if( (abs_p3(add_p3(op1, op3)) == 1) && 
-              (op2_p3 == add_p3(op1, op3)) ){
+//          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//          if( (abs_p3(add_p3(op1, op3)) == 1) && 
+//              (op2_p3 == add_p3(op1, op3)) ){
 
 //          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
 //          if( (((abs_p3(op1) == 2) && (abs_p3(op3) == 0)) || 
@@ -384,12 +384,12 @@ void set_index_4pt(const Operators& in1, const Operators& in2,
         if(compare_quantum_numbers_of_pdg(op4, in4)){
 
           // enforce cm momentum conservation
-//          if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
+          if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
 
-          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
-          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
-          if( (abs_p3(add_p3(op1, op3)) == 1) && (abs_p3(add_p3(op2, op4)) == 1)
-              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
+//          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
+//          if( (abs_p3(add_p3(op1, op3)) == 1) && (abs_p3(add_p3(op2, op4)) == 1)
+//              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
 
 //          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
 //          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};

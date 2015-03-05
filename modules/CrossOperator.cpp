@@ -5,9 +5,11 @@ static GlobalData * const global_data = GlobalData::Instance();
 
 LapH::CrossOperator::CrossOperator(const size_t number) : X(number) {
 
-  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_4pt_3_IO();
+  const vec_index_IO_1 op_C4_cross = global_data->get_lookup_4pt_3_IO();
+  const vec_index_IO_1 op_C4_box = global_data->get_lookup_c4i10_IO();
   const vec_index_IO_1 op_C3_IO = global_data->get_lookup_3pt_IO();
-  const size_t nb_op = std::max(op_C3_IO.size(), op_C4_IO.size());
+  const size_t nb_op = std::max(std::max(op_C3_IO.size(), op_C4_cross.size()),
+                                op_C4_box.size());
   const std::vector<quark> quarks = global_data->get_quarks();
   const size_t nb_rnd = quarks[0].number_of_rnd_vec;
   const size_t dilE = quarks[0].number_of_dilution_E;

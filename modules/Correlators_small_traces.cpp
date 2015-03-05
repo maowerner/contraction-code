@@ -354,7 +354,7 @@ void LapH::Correlators::build_and_write_c2zero(const size_t config_i){
   // correlators - vector of correlators
 
   sprintf(outfile, "%s/C2_rho_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C2_IO, "C2+", C2_mes);
+  export_corr_IO(outfile, op_C2_IO, "C20", C2_mes);
 
   time = clock() - time;
   std::cout << "\t\tSUCCESS - " << ((float) time)/CLOCKS_PER_SEC 

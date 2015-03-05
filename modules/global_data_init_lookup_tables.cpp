@@ -113,7 +113,7 @@ void init_lookup_corr(const Correlator_list& correlator_list,
       std::cout << " " << b;
     for(auto b : a.p3)
       std::cout << " " << b;
-    std::cout << "\t" << a.id_vdv << " " << a.first_vdv << " " 
+    std::cout << "\t " << a.id_vdv << " " << a.first_vdv << " " 
               << a.negative_momentum << " " << a.id_rvdvr << std::endl;
   }
 

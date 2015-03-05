@@ -59,6 +59,43 @@ void set_tag(Tag& tag, const std::pair<size_t, size_t>& i, const vec_index_2pt& 
 }
 
 // Set the tag from two operator structures
+void set_tag(Tag& tag, const size_t i, const vec_index_3pt& corr_type){
+
+  const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
+  tag.q_cont = "udud";
+
+  tag.mom.push_back(op_Corr[corr_type[i].index_Q2[0]].p3);
+  tag.mom.push_back(op_Corr[corr_type[i].index_Corr].p3);
+  tag.mom.push_back(op_Corr[corr_type[i].index_Q2[1]].p3);
+  
+  tag.mom_cm = square_comp(add_mom(tag.mom[0], tag.mom[2]),
+                           add_mom(tag.mom[0], tag.mom[2]));
+
+  tag.dis.push_back(op_Corr[corr_type[i].index_Q2[0]].dis3);
+  tag.dis.push_back(op_Corr[corr_type[i].index_Corr].dis3);
+  tag.dis.push_back(op_Corr[corr_type[i].index_Q2[1]].dis3);
+
+  std::array<int, 4> tmp = {{0,0,0,0}};
+  for(size_t ind = 0; 
+      ind < op_Corr[corr_type[i].index_Q2[0]].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i].index_Q2[0]].gamma[ind];
+  }
+  tag.gam.push_back(tmp);
+  for(auto& el : tmp) el = 0;
+  for(size_t ind = 0; 
+      ind < op_Corr[corr_type[i].index_Corr].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i].index_Corr].gamma[ind];
+  }
+  tag.gam.push_back(tmp);
+  for(auto& el : tmp) el = 0;
+  for(size_t ind = 0; 
+      ind < op_Corr[corr_type[i].index_Q2[1]].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i].index_Q2[1]].gamma[ind];
+  }
+  tag.gam.push_back(tmp);
+}
+
+// Set the tag from two operator structures
 void set_tag(Tag& tag, const size_t i, const vec_index_4pt& corr_type){
 
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
@@ -148,6 +185,7 @@ void convert_hadron_to_vec(const io_list& op_io, const array_cd_d2& C2_mes,
   const size_t Lt = global_data->get_Lt();
 
   vec_index_2pt lookup_2pt = global_data->get_lookup_2pt_trace(); 
+  vec_index_3pt lookup_3pt = global_data->get_lookup_3pt_trace(); 
   vec_index_4pt lookup_4pt = global_data->get_lookup_4pt_trace();
 
   corr.resize(op_io.size());
@@ -162,10 +200,14 @@ void convert_hadron_to_vec(const io_list& op_io, const array_cd_d2& C2_mes,
     corr[op.id].assign(C2_mes[op.id].origin(), C2_mes[op.id].origin() + 
         C2_mes[op.id].size());
 
-    if( (corr_type == "C2+") || (corr_type == "C4I2+_1") || (corr_type == "C4I2+_2") ){
+    if( (corr_type == "C2+") || (corr_type == "C4I2+_1") || 
+        (corr_type == "C4I2+_2")  || (corr_type == "C20") ){
       set_tag(tags[op.id], op.id, lookup_2pt);
     }
-    else if( corr_type == "C4I2+_3"){
+    else if( (corr_type == "C3I10") ){
+      set_tag(tags[op.id], op.id, lookup_3pt);
+    }
+    else if( (corr_type == "C4I2+_3") || (corr_type == "C4I10") ){
       set_tag(tags[op.id], op.id, lookup_4pt);
     }
   }}

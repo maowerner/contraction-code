@@ -621,7 +621,7 @@ void LapH::Correlators::write_C4_box(const size_t config_i){
   const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_4pt();
   const size_t norm1 = Lt*rnd_vec_index.size();
 
-  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_4pt_3_IO();
+  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_c4i10_IO();
 
   if(op_C4_IO.size() == 0)
     return;
@@ -685,7 +685,7 @@ void LapH::Correlators::write_C4_cross(const size_t config_i){
   const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_4pt();
   const size_t norm1 = Lt*rnd_vec_index.size();
 
-  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_4pt_3_IO();
+  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_c4i10_IO();
 
   if(op_C4_IO.size() == 0)
     return;
@@ -699,7 +699,7 @@ void LapH::Correlators::write_C4_cross(const size_t config_i){
   // C4_mes  - boost structure containing all correlators
 
   sprintf(outfile, "%s/C4I2+_3_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I2+_3", C4_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_mes);
 
 }
 
