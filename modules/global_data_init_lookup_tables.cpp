@@ -136,13 +136,13 @@ void init_lookup_C2zero_IO(const Correlator_list& correlator_list,
       for(const auto& op2_from_list : operator_list[corr.operator_numbers[1]]){
         for(auto op : lookup_2pt){
           // TODO: change lookup_corr[op.index_Q2] to lookup_Q2[op.index_Q2]
-          if(compare_quantum_numbers_of_pdg(lookup_corr[op.index_Q2], 
+          if(compare_quantum_numbers_of_pdg(lookup_corr[op.index_Q2[0]], 
                                             op1_from_list)){
-          if(compare_quantum_numbers_of_pdg(lookup_corr[op.index_Corr], 
+          if(compare_quantum_numbers_of_pdg(lookup_corr[op.index_Corr[0]], 
                                             op2_from_list)){
             // momentum conservation in case of 2pt function including momentum turning
             // due to gamma_5 trick
-            if(add_p3(lookup_corr[op.index_Q2], lookup_corr[op.index_Corr]) == zero){
+            if(add_p3(lookup_corr[op.index_Q2[0]], lookup_corr[op.index_Corr[0]]) == zero){
               index_IO_1 write;
               // write only one value in each indexlist
               write.index_pt.emplace_back(op.id);
@@ -198,13 +198,13 @@ void init_lookup_C2plus_IO(const Correlator_list& correlator_list,
       for(const auto& op2_from_list : operator_list[corr.operator_numbers[1]]){
         for(auto op : lookup_2pt){
           // TODO: change lookup_corr[op.index_Q2] to lookup_Q2[op.index_Q2]
-          if(compare_quantum_numbers_of_pdg(lookup_corr[op.index_Q2], 
+          if(compare_quantum_numbers_of_pdg(lookup_corr[op.index_Q2[0]], 
                                             op1_from_list)){
-          if(compare_quantum_numbers_of_pdg(lookup_corr[op.index_Corr], 
+          if(compare_quantum_numbers_of_pdg(lookup_corr[op.index_Corr[0]], 
                                             op2_from_list)){
             // momentum conservation in case of 2pt function including momentum turning
             // due to gamma_5 trick
-            if(add_p3(lookup_corr[op.index_Q2], lookup_corr[op.index_Corr]) == zero){
+            if(add_p3(lookup_corr[op.index_Q2[0]], lookup_corr[op.index_Corr[0]]) == zero){
               index_IO_1 write;
               // write only one value in each indexlist
               write.index_pt.emplace_back(op.id);
@@ -374,9 +374,9 @@ void init_lookup_C4I2plus_IO(const Correlator_list& correlator_list,
     const pdg op4 = lookup_corr[op_C4.index_Corr[1]];
 
     for(const auto& op_2pt_1 : lookup_2pt){
-    if( (op1.id == op_2pt_1.index_Q2) && (op2.id == op_2pt_1.index_Corr)){
+    if( (op1.id == op_2pt_1.index_Q2[0]) && (op2.id == op_2pt_1.index_Corr[0])){
       for(const auto& op_2pt_2 : lookup_2pt){
-      if( (op3.id == op_2pt_2.index_Q2) && (op4.id == op_2pt_2.index_Corr)){
+      if( (op3.id == op_2pt_2.index_Q2[0]) && (op4.id == op_2pt_2.index_Corr[0])){
 
 //        // enforce cm momentum conservation
 //        if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
@@ -528,8 +528,8 @@ void init_lookup_2pt(const Correlator_list& correlator_list,
     auto it2 = it;
     it2++;
     while(it2 != lookup_2pt.end()) {
-      if( (it->index_Q2 == it2->index_Q2) && 
-          (it->index_Corr == it2->index_Corr) )
+      if( (it->index_Q2[0] == it2->index_Q2[0]) && 
+          (it->index_Corr[0] == it2->index_Corr[0]) )
         lookup_2pt.erase(it2);
       else
         it2++;
@@ -545,7 +545,7 @@ void init_lookup_2pt(const Correlator_list& correlator_list,
 
   std::cout << "lookup_2pt" << std::endl;
   for(const auto& a : lookup_2pt){
-    std::cout << a.id << "\t" << a.index_Q2 << "\t" << a.index_Corr<< std::endl;
+    std::cout << a.id << "\t" << a.index_Q2[0] << "\t" << a.index_Corr[0] << std::endl;
   }
 }
 

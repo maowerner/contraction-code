@@ -65,7 +65,9 @@ private:
                                   cmplx& Q2_trace);
 
   void build_Q1_trace();
-  void build_Q2_trace();
+  void build_Q2_trace(const BasicOperator& basic,
+                      const LapH::VdaggerV& vdaggerv, 
+                      const LapH::Perambulator& peram);
   void build_Q2_trace_uncharged();
 
   void build_and_write_2pt(const size_t config_i);

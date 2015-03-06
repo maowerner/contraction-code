@@ -104,8 +104,8 @@ typedef std::list<std::array<size_t, 4> > indexlist_4;
 
   struct index_2pt {
     size_t id;
-    size_t index_Q2;
-    size_t index_Corr;
+    size_t index_Q2[1];
+    size_t index_Corr[1];
   };
 
   struct index_3pt {

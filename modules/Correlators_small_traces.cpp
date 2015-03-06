@@ -67,7 +67,9 @@ void LapH::Correlators::build_Q1_trace(){
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void LapH::Correlators::build_Q2_trace(){
+void LapH::Correlators::build_Q2_trace(const BasicOperator& basic,
+                                       const LapH::VdaggerV& vdaggerv, 
+                                       const LapH::Perambulator& peram){
 
   const size_t Lt = global_data->get_Lt();
   const std::vector<quark> quarks = global_data->get_quarks();
@@ -77,8 +79,71 @@ void LapH::Correlators::build_Q2_trace(){
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   const indexlist_2 rnd_vec_index = global_data->get_rnd_vec_2pt();
 
+  std::map<size_t, size_t> map_required_Q2;
+  size_t counter = 0;
+  std::pair<std::map<size_t, size_t>::iterator, bool> ret;
+
+  const vec_index_IO_1 op_C2_IO = global_data->get_lookup_2pt_IO();
+  const vec_index_IO_2 op_C4_1_IO = global_data->get_lookup_4pt_1_IO();
+  const vec_index_IO_2 op_C4_2_IO = global_data->get_lookup_4pt_2_IO();
+
   std::cout << "\n\tcomputing the traces of pi_+/-:\r";
   clock_t time = clock();
+
+  for(const auto& op : op_C2_IO){
+    for(const auto& i : op.index_pt){
+      for(const auto q2 : op_C2[i].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+    }
+  }
+
+  for(const auto& op : op_C4_1_IO){
+    for(const auto& i : op.index_pt){
+      for(const auto q2 : op_C2[i.first].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+      for(const auto q2 : op_C2[i.second].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+    }
+  }
+
+  for(const auto& op : op_C4_2_IO){
+    for(const auto& i : op.index_pt){
+      for(const auto q2 : op_C2[i.first].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+      for(const auto q2 : op_C2[i.second].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+    }
+  }
+
+  for(const auto& l : map_required_Q2)
+    std::cout << l.first << " " << l.second << std::endl;
+
+//  basic.init_operator(vdaggerv, peram);
+
+  // setting the correlation functions to zero
+  std::fill(Q2_trace.data(), Q2_trace.data()+Q2_trace.num_elements(), 
+            cmplx(.0,.0));
+
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
     std::cout << "\tcomputing the traces of pi_+/-: " 
         << std::setprecision(2) << (float) t_sink/Lt*100 << "%\r" 
@@ -94,8 +159,8 @@ void LapH::Correlators::build_Q2_trace(){
     {
       for(const auto& op : op_C2){
 
-        size_t id_Q2 = op.index_Q2;
-        size_t id_Corr = op.index_Corr;
+        size_t id_Q2 = op.index_Q2[0];
+        size_t id_Corr = op.index_Corr[0];
 
       #pragma omp task shared(op)
         // TODO: A collpase of both random vectors might be better but
@@ -145,6 +210,12 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
   const indexlist_2 rnd_vec_index = global_data->get_rnd_vec_2pt();
 
   std::cout << "\n\tcomputing the traces of pi_+/-:\r";
+
+  // setting the correlation functions to zero
+  std::fill(Q2_trace_uncharged.data(), 
+            Q2_trace_uncharged.data()+Q2_trace_uncharged.num_elements(), 
+            cmplx(.0,.0));
+
   clock_t time = clock();
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
     std::cout << "\tcomputing the traces of pi_+/-: " 
@@ -160,8 +231,8 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
     {
       for(const auto& op : op_C2){
 
-        size_t id_Q2 = op.index_Q2;
-        size_t id_Corr = op.index_Corr;
+        size_t id_Q2 = op.index_Q2[0];
+        size_t id_Corr = op.index_Corr[0];
 
       #pragma omp task shared(op)
         // TODO: A collpase of both random vectors might be better but
@@ -253,8 +324,9 @@ void LapH::Correlators::build_and_write_2pt(const size_t config_i){
       global_data->get_name_lattice();
 
   // setting the correlation function to zero
-  std::fill(C2_mes.origin(), C2_mes.origin() + C2_mes.num_elements() , 
-                                                            cmplx(0.0, 0.0));
+  std::fill(C2_mes.origin(), C2_mes.origin() + C2_mes.num_elements(), 
+            cmplx(0.0, 0.0));
+
   if(op_C2_IO.size() == 0)
     return;
 
@@ -263,8 +335,8 @@ void LapH::Correlators::build_and_write_2pt(const size_t config_i){
 
     for(const auto& op : op_C2_IO) {
     for(const auto& i : op.index_pt){
-      size_t id_Q2 = op_C2[i].index_Q2;
-      size_t id_Corr = op_C2[i].index_Corr;
+      size_t id_Q2 = op_C2[i].index_Q2[0];
+      size_t id_Corr = op_C2[i].index_Corr[0];
 
       for(const auto& rnd : rnd_vec_index) {
         C2_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] += 
@@ -322,8 +394,9 @@ void LapH::Correlators::build_and_write_c2zero(const size_t config_i){
       global_data->get_name_lattice();
 
   // setting the correlation function to zero
-  std::fill(C2_mes.origin(), C2_mes.origin() + C2_mes.num_elements() , 
-                                                            cmplx(0.0, 0.0));
+  std::fill(C2_mes.origin(), C2_mes.origin() + C2_mes.num_elements(), 
+            cmplx(0.0, 0.0));
+
   if(op_C2_IO.size() == 0)
     return;
 
@@ -332,8 +405,8 @@ void LapH::Correlators::build_and_write_c2zero(const size_t config_i){
 
     for(const auto& op : op_C2_IO) {
     for(const auto& i : op.index_pt){
-      size_t id_Q2 = op_C2[i].index_Q2;
-      size_t id_Corr = op_C2[i].index_Corr;
+      size_t id_Q2 = op_C2[i].index_Q2[0];
+      size_t id_Corr = op_C2[i].index_Corr[0];
 
       for(const auto& rnd : rnd_vec_index) {
         C2_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] += 
@@ -393,7 +466,8 @@ if(op_C4_IO.size() == 0)
 
   // setting the correlation function to zero
   std::fill(C4_mes.data(), C4_mes.data() + C4_mes.num_elements(), 
-                                                            cmplx(0.0, 0.0));
+            cmplx(0.0, 0.0));
+
   for(int t_source = 0; t_source < Lt; ++t_source){
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
     int t_source_1 = (t_source + 1) % Lt;
@@ -401,10 +475,10 @@ if(op_C4_IO.size() == 0)
 
     for(const auto& op : op_C4_IO){
     for(const auto& i : op.index_pt){
-      size_t id_Q2_0   = op_C2[i.first].index_Q2;
-      size_t id_Corr_0 = op_C2[i.first].index_Corr;
-      size_t id_Q2_1   = op_C2[i.second].index_Q2;
-      size_t id_Corr_1 = op_C2[i.second].index_Corr;
+      size_t id_Q2_0   = op_C2[i.first].index_Q2[0];
+      size_t id_Corr_0 = op_C2[i.first].index_Corr[0];
+      size_t id_Q2_1   = op_C2[i.second].index_Q2[0];
+      size_t id_Corr_1 = op_C2[i.second].index_Corr[0];
 
       for(const auto& rnd : rnd_vec_index) {
         C4_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] +=
@@ -461,7 +535,8 @@ void LapH::Correlators::build_and_write_C4_2(const size_t config_i){
 
   // setting the correlation function to zero
   std::fill(C4_mes.data(), C4_mes.data() + C4_mes.num_elements(), 
-                                                             cmplx(0.0, 0.0));
+            cmplx(0.0, 0.0));
+
   for(int t_source = 0; t_source < Lt; ++t_source){
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
     int t_source_1 = (t_source + 1) % Lt;
@@ -469,10 +544,10 @@ void LapH::Correlators::build_and_write_C4_2(const size_t config_i){
 
     for(const auto& op : op_C4_IO){
     for(const auto& i : op.index_pt){
-      size_t id_Q2_0   = op_C2[i.first].index_Q2;
-      size_t id_Corr_0 = op_C2[i.first].index_Corr;
-      size_t id_Q2_1   = op_C2[i.second].index_Q2;
-      size_t id_Corr_1 = op_C2[i.second].index_Corr;
+      size_t id_Q2_0   = op_C2[i.first].index_Q2[0];
+      size_t id_Corr_0 = op_C2[i.first].index_Corr[0];
+      size_t id_Q2_1   = op_C2[i.second].index_Q2[0];
+      size_t id_Corr_1 = op_C2[i.second].index_Corr[0];
 
       for(const auto& rnd : rnd_vec_index) {
         C4_mes[op.id][abs((t_sink - t_source - Lt) % Lt)] +=

@@ -60,12 +60,6 @@ void LapH::Correlators::compute_correlators(const size_t config_i){
 
   // initialising the big arrays
   set_corr(config_i);
-  // setting the correlation functions to zero
-  std::fill(Q2_trace.data(), 
-    Q2_trace.data()+Q2_trace.num_elements(), cmplx(.0,.0));
-  std::fill(Q2_trace_uncharged.data(), 
-    Q2_trace_uncharged.data()+Q2_trace_uncharged.num_elements(), cmplx(.0,.0));
-  std::fill(C4_mes.data(), C4_mes.data()+C4_mes.num_elements(), cmplx(.0,.0));
 
   // global variables from input file needed here
   const int Lt = global_data->get_Lt();
@@ -73,34 +67,34 @@ void LapH::Correlators::compute_correlators(const size_t config_i){
   // memory for intermediate matrices when building C4_3 (save multiplications)
   LapH::CrossOperator X(2);
 
-  basic.init_operator('b', vdaggerv, peram);
-  basic.init_operator_verbose('b', vdaggerv, peram);
-  basic.init_operator_u('b', vdaggerv, peram);
-  basic.init_operator_d('b', vdaggerv, peram);
+  basic.init_operator(vdaggerv, peram);
+//  basic.init_operator_verbose(vdaggerv, peram);
+//  basic.init_operator_u(vdaggerv, peram);
+//  basic.init_operator_d(vdaggerv, peram);
 
   // computing the meson correlator which can be used to compute all small
   // trace combinations for 2pt and 4pt functions
-  build_Q2_trace();
+  build_Q2_trace(basic, vdaggerv, peram);
 
 //  build_and_write_2pt(config_i);
   build_and_write_C4_1(config_i);
   build_and_write_C4_2(config_i);
 
 //  build_Q1_trace();
-  build_Q2_trace_uncharged();
-  build_and_write_c2zero(config_i);
-
-  // computing the meson 4pt big cross trace
-  // TODO: if condition that at least four random vectos are needed
-  compute_meson_3pt_trace(X);
-  write_C3(config_i);
-  compute_meson_3pt_trace_verbose(X);
-  write_C3_verbose(config_i);
-
-//  compute_meson_4pt_cross_trace(X);
-//  write_C4_cross(config_i);
-  compute_meson_4pt_box_trace(X);
-  write_C4_box(config_i);
+//  build_Q2_trace_uncharged();
+//  build_and_write_c2zero(config_i);
+//
+//  // computing the meson 4pt big cross trace
+//  // TODO: if condition that at least four random vectos are needed
+//  compute_meson_3pt_trace(X);
+//  write_C3(config_i);
+//  compute_meson_3pt_trace_verbose(X);
+//  write_C3_verbose(config_i);
+//
+////  compute_meson_4pt_cross_trace(X);
+////  write_C4_cross(config_i);
+//  compute_meson_4pt_box_trace(X);
+//  write_C4_box(config_i);
 
 }
 /******************************************************************************/
@@ -131,14 +125,14 @@ void LapH::Correlators::read_rnd_vectors_from_file (const int config_i) {
 //      std::string filename = global_data->get_path_perambulators() + "/";
 
     // data path for qbig contractions
-//    sprintf(temp, "cnfg%d/rnd_vec_%01d/", config_i, rnd_vec_i);
-//    std::string filename = global_data->get_path_perambulators()
-//      + "/" + temp;
+    sprintf(temp, "cnfg%d/rnd_vec_%01d/", config_i, rnd_vec_i);
+    std::string filename = global_data->get_path_perambulators()
+      + "/" + temp;
 
     // data path for juqueen contractions
-      sprintf(temp, "cnfg%d/", config_i);
-      std::string filename = global_data->get_path_perambulators()
-				+ "/" + temp;
+//      sprintf(temp, "cnfg%d/", config_i);
+//      std::string filename = global_data->get_path_perambulators()
+//				+ "/" + temp;
 
     // read random vector
     sprintf(infile, "%srandomvector.rndvecnb%02d.u.nbev%04d.%04d", 

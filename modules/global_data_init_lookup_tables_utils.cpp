@@ -311,8 +311,8 @@ void set_index_2pt(const Operators& in1, const Operators& in2,
   if(compare_quantum_numbers_of_pdg(op1, in1)){
     for(const auto& op2 : lookup_corr){
     if(compare_quantum_numbers_of_pdg(op2, in2)){
-        write.index_Q2 = op1.id;
-        write.index_Corr = op2.id;
+        write.index_Q2[0] = op1.id;
+        write.index_Corr[0] = op2.id;
   
         lookup_2pt.push_back(write);
     }} //loops over sink end here

@@ -18,41 +18,41 @@ void set_tag(Tag& tag, const std::pair<size_t, size_t>& i, const vec_index_2pt& 
   
   tag.q_cont = "udud";
 
-  tag.mom.push_back(op_Corr[corr_type[i.first].index_Q2].p3);
-  tag.mom.push_back(op_Corr[corr_type[i.first].index_Corr].p3);
-  tag.mom.push_back(op_Corr[corr_type[i.second].index_Q2].p3);
-  tag.mom.push_back(op_Corr[corr_type[i.second].index_Corr].p3);
+  tag.mom.push_back(op_Corr[corr_type[i.first].index_Q2[0]].p3);
+  tag.mom.push_back(op_Corr[corr_type[i.first].index_Corr[0]].p3);
+  tag.mom.push_back(op_Corr[corr_type[i.second].index_Q2[0]].p3);
+  tag.mom.push_back(op_Corr[corr_type[i.second].index_Corr[0]].p3);
   
   tag.mom_cm = square_comp(add_mom(tag.mom[0], tag.mom[2]),
                            add_mom(tag.mom[0], tag.mom[2]));
 
-  tag.dis.push_back(op_Corr[corr_type[i.first].index_Q2].dis3);
-  tag.dis.push_back(op_Corr[corr_type[i.first].index_Corr].dis3);
-  tag.dis.push_back(op_Corr[corr_type[i.second].index_Q2].dis3);
-  tag.dis.push_back(op_Corr[corr_type[i.second].index_Corr].dis3);
+  tag.dis.push_back(op_Corr[corr_type[i.first].index_Q2[0]].dis3);
+  tag.dis.push_back(op_Corr[corr_type[i.first].index_Corr[0]].dis3);
+  tag.dis.push_back(op_Corr[corr_type[i.second].index_Q2[0]].dis3);
+  tag.dis.push_back(op_Corr[corr_type[i.second].index_Corr[0]].dis3);
 
   std::array<int, 4> tmp = {{0,0,0,0}};
   for(size_t ind = 0; 
-      ind < op_Corr[corr_type[i.first].index_Q2].gamma.size(); ind++){
-    tmp[ind] = op_Corr[corr_type[i.first].index_Q2].gamma[ind];
+      ind < op_Corr[corr_type[i.first].index_Q2[0]].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i.first].index_Q2[0]].gamma[ind];
   }
   tag.gam.push_back(tmp);
   for(auto& el : tmp) el = 0;
   for(size_t ind = 0; 
-      ind < op_Corr[corr_type[i.first].index_Corr].gamma.size(); ind++){
-    tmp[ind] = op_Corr[corr_type[i.first].index_Corr].gamma[ind];
+      ind < op_Corr[corr_type[i.first].index_Corr[0]].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i.first].index_Corr[0]].gamma[ind];
   }
   tag.gam.push_back(tmp);
   for(auto& el : tmp) el = 0;
   for(size_t ind = 0; 
-      ind < op_Corr[corr_type[i.first].index_Q2].gamma.size(); ind++){
-    tmp[ind] = op_Corr[corr_type[i.second].index_Q2].gamma[ind];
+      ind < op_Corr[corr_type[i.first].index_Q2[0]].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i.second].index_Q2[0]].gamma[ind];
   }
   tag.gam.push_back(tmp);
   for(auto& el : tmp) el = 0;
   for(size_t ind = 0; 
-      ind < op_Corr[corr_type[i.first].index_Corr].gamma.size(); ind++){
-    tmp[ind] = op_Corr[corr_type[i.second].index_Corr].gamma[ind];
+      ind < op_Corr[corr_type[i.first].index_Corr[0]].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i.second].index_Corr[0]].gamma[ind];
   }
   tag.gam.push_back(tmp);
 
@@ -147,24 +147,24 @@ void set_tag(Tag& tag, const size_t i, const vec_index_2pt& corr_type){
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   tag.q_cont = "ud";
 
-  tag.mom.push_back(op_Corr[corr_type[i].index_Q2].p3);
-  tag.mom.push_back(op_Corr[corr_type[i].index_Corr].p3);
+  tag.mom.push_back(op_Corr[corr_type[i].index_Q2[0]].p3);
+  tag.mom.push_back(op_Corr[corr_type[i].index_Corr[0]].p3);
   
   tag.mom_cm = square_comp(tag.mom[0], tag.mom[0]);
 
-  tag.dis.push_back(op_Corr[corr_type[i].index_Q2].dis3);
-  tag.dis.push_back(op_Corr[corr_type[i].index_Corr].dis3);
+  tag.dis.push_back(op_Corr[corr_type[i].index_Q2[0]].dis3);
+  tag.dis.push_back(op_Corr[corr_type[i].index_Corr[0]].dis3);
 
   std::array<int, 4> tmp = {{0,0,0,0}};
   for(size_t ind = 0; 
-      ind < op_Corr[corr_type[i].index_Q2].gamma.size(); ind++){
-    tmp[ind] = op_Corr[corr_type[i].index_Q2].gamma[ind];
+      ind < op_Corr[corr_type[i].index_Q2[0]].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i].index_Q2[0]].gamma[ind];
   }
   tag.gam.push_back(tmp);
   for(auto& el : tmp) el = 0;
   for(size_t ind = 0; 
-      ind < op_Corr[corr_type[i].index_Corr].gamma.size(); ind++){
-    tmp[ind] = op_Corr[corr_type[i].index_Corr].gamma[ind];
+      ind < op_Corr[corr_type[i].index_Corr[0]].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i].index_Corr[0]].gamma[ind];
   }
   tag.gam.push_back(tmp);
 
@@ -222,11 +222,11 @@ void export_corr_IO (const char* filename, const vec_index_IO_1& op_IO,
   GlobalDat dat;
   std::vector<Tag> tags;
   std::vector<std::string> tag_strings;
-  std::string tag_string;
   std::vector<vec> corr;
 
   convert_hadron_to_vec <vec_index_IO_1> (op_IO, C2_mes, corr_type, tags, corr);
   for(const auto& tag : tags){
+    std::string tag_string;
     tag_to_string(tag, tag_string);
     tag_strings.push_back(tag_string);
   }

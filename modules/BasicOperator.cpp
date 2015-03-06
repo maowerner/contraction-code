@@ -242,9 +242,6 @@ BasicOperator::BasicOperator() : gamma(), Q2() {
   for(int i = 0; i < 16; ++i)
     create_gamma(gamma, i);
 
-  Q2.resize(boost::extents[Lt][Lt/dilT][7][nb_op][nb_rnd][nb_rnd]);
-  std::fill(Q2.data(), Q2.data() + Q2.num_elements(), 
-            Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
 
   Q1_u.resize(boost::extents[Lt][Lt/dilT][nb_op][nb_rnd][nb_rnd]);
   std::fill(Q1_u.data(), Q1_u.data() + Q1_u.num_elements(), 
@@ -260,9 +257,8 @@ BasicOperator::BasicOperator() : gamma(), Q2() {
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void BasicOperator::init_operator_verbose(const char dilution,
-                                  const LapH::VdaggerV& vdaggerv, 
-                                  const LapH::Perambulator& peram){
+void BasicOperator::init_operator_verbose(const LapH::VdaggerV& vdaggerv, 
+                                          const LapH::Perambulator& peram){
 
   const int Lt = global_data->get_Lt();
   const size_t nb_ev = global_data->get_number_of_eigen_vec();
@@ -369,8 +365,7 @@ void BasicOperator::init_operator_verbose(const char dilution,
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void BasicOperator::init_operator(const char dilution,
-                                  const LapH::VdaggerV& vdaggerv, 
+void BasicOperator::init_operator(const LapH::VdaggerV& vdaggerv, 
                                   const LapH::Perambulator& peram){
 
   const int Lt = global_data->get_Lt();
@@ -387,6 +382,11 @@ void BasicOperator::init_operator(const char dilution,
 
   std::cout << "\n" << std::endl;
   clock_t time = clock();
+
+  Q2.resize(boost::extents[Lt][Lt/dilT][7][nb_op][nb_rnd][nb_rnd]);
+  std::fill(Q2.data(), Q2.data() + Q2.num_elements(), 
+            Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
+
   #pragma omp parallel 
   {
   Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(Q2_size, 4 * nb_ev);
@@ -484,9 +484,8 @@ void BasicOperator::init_operator(const char dilution,
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void BasicOperator::init_operator_u(const char dilution,
-                                  const LapH::VdaggerV& vdaggerv, 
-                                  const LapH::Perambulator& peram){
+void BasicOperator::init_operator_u(const LapH::VdaggerV& vdaggerv, 
+                                    const LapH::Perambulator& peram){
 
   const int Lt = global_data->get_Lt();
   const size_t nb_ev = global_data->get_number_of_eigen_vec();
@@ -561,9 +560,8 @@ void BasicOperator::init_operator_u(const char dilution,
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void BasicOperator::init_operator_d(const char dilution,
-                                  const LapH::VdaggerV& vdaggerv, 
-                                  const LapH::Perambulator& peram){
+void BasicOperator::init_operator_d(const LapH::VdaggerV& vdaggerv, 
+                                    const LapH::Perambulator& peram){
 
   const int Lt = global_data->get_Lt();
   const size_t nb_ev = global_data->get_number_of_eigen_vec();

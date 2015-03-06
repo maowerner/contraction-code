@@ -21,21 +21,17 @@ public:
   BasicOperator();
   ~BasicOperator () {};
 
-  void init_operator(const char dilution, 
-                     const LapH::VdaggerV& vdaggerv,
+  void init_operator(const LapH::VdaggerV& vdaggerv,
                      const LapH::Perambulator& peram);
 
-  void init_operator_verbose(const char dilution, 
-                     const LapH::VdaggerV& vdaggerv,
-                     const LapH::Perambulator& peram);
+  void init_operator_verbose(const LapH::VdaggerV& vdaggerv,
+                             const LapH::Perambulator& peram);
 
-  void init_operator_u(const char dilution, 
-                     const LapH::VdaggerV& vdaggerv,
-                     const LapH::Perambulator& peram);
+  void init_operator_u(const LapH::VdaggerV& vdaggerv,
+                       const LapH::Perambulator& peram);
 
-  void init_operator_d(const char dilution, 
-                     const LapH::VdaggerV& vdaggerv,
-                     const LapH::Perambulator& peram);
+  void init_operator_d(const LapH::VdaggerV& vdaggerv,
+                       const LapH::Perambulator& peram);
 
 
   // returns (P^(b) rho_i)^dagger D_d^-1 V^dagger V Gamma D_u^-1 (P^(b) rho_j)
