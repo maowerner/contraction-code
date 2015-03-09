@@ -65,14 +65,14 @@ void set_tag(Tag& tag, const size_t i, const vec_index_3pt& corr_type){
   tag.q_cont = "udud";
 
   tag.mom.push_back(op_Corr[corr_type[i].index_Q2[0]].p3);
-  tag.mom.push_back(op_Corr[corr_type[i].index_Corr].p3);
+  tag.mom.push_back(op_Corr[corr_type[i].index_Corr[0]].p3);
   tag.mom.push_back(op_Corr[corr_type[i].index_Q2[1]].p3);
   
   tag.mom_cm = square_comp(add_mom(tag.mom[0], tag.mom[2]),
                            add_mom(tag.mom[0], tag.mom[2]));
 
   tag.dis.push_back(op_Corr[corr_type[i].index_Q2[0]].dis3);
-  tag.dis.push_back(op_Corr[corr_type[i].index_Corr].dis3);
+  tag.dis.push_back(op_Corr[corr_type[i].index_Corr[0]].dis3);
   tag.dis.push_back(op_Corr[corr_type[i].index_Q2[1]].dis3);
 
   std::array<int, 4> tmp = {{0,0,0,0}};
@@ -83,8 +83,8 @@ void set_tag(Tag& tag, const size_t i, const vec_index_3pt& corr_type){
   tag.gam.push_back(tmp);
   for(auto& el : tmp) el = 0;
   for(size_t ind = 0; 
-      ind < op_Corr[corr_type[i].index_Corr].gamma.size(); ind++){
-    tmp[ind] = op_Corr[corr_type[i].index_Corr].gamma[ind];
+      ind < op_Corr[corr_type[i].index_Corr[0]].gamma.size(); ind++){
+    tmp[ind] = op_Corr[corr_type[i].index_Corr[0]].gamma[ind];
   }
   tag.gam.push_back(tmp);
   for(auto& el : tmp) el = 0;

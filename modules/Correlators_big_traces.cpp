@@ -15,16 +15,49 @@ void LapH::Correlators::compute_meson_3pt_trace_verbose(LapH::CrossOperator& X) 
 
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   const vec_index_3pt op_C3 = global_data->get_lookup_3pt_trace();
-  const vec_index_IO_1 op_C3_IO = global_data->get_lookup_3pt_IO();
   const indexlist_3 rnd_vec_index = global_data->get_rnd_vec_3pt();
+
+  size_t counter_1 = 0;
+  size_t counter_2 = 0;
+  std::pair<std::map<size_t, size_t>::iterator, bool> ret;
+  map_required_Q2.clear();
+  map_required_u.clear();
+  map_required_times.clear();
+
+  const vec_index_IO_1 op_C3_IO = global_data->get_lookup_3pt_IO();
 
   std::cout << "\n\tcomputing the 3pt function:\r";
   clock_t time = clock();
 
+  for(const auto& op : op_C3_IO){
+    for(const auto& i : op.index_pt){
+      for(const auto q2 : op_C3[i].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter_1));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter_1++;
+      }
+      for(const auto corr : op_C3[i].index_Corr){
+        ret = map_required_u.insert(std::pair<size_t, size_t>(corr, counter_2));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter_2++;
+      }
+    }
+  }
+
+  // only need quarklines without fiertz rearangement
+  map_required_times.insert(std::pair<size_t, size_t>(5, 0));
+  map_required_times.insert(std::pair<size_t, size_t>(6, 1));
+
+  basic.reset_operator();
+  basic.init_operator_verbose(map_required_Q2, map_required_times, vdaggerv, peram);
+  basic.init_operator_u(map_required_u, vdaggerv, peram);
+
   std::fill(C3_A_mes.data(), C3_A_mes.data() + C3_A_mes.num_elements(), 
-                                                            cmplx(0.0, 0.0));
+            cmplx(0.0, 0.0));
   std::fill(C3_B_mes.data(), C3_B_mes.data() + C3_B_mes.num_elements(), 
-                                                            cmplx(0.0, 0.0));
+            cmplx(0.0, 0.0));
 
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
     std::cout << "\tcomputing the 3pt function: " 
@@ -35,8 +68,10 @@ void LapH::Correlators::compute_meson_3pt_trace_verbose(LapH::CrossOperator& X) 
       const int t_source = (t_sink + 1 + t)%Lt;
       const int t_source_1 = (t_source + 1) % Lt;
 
-      X.construct_3pt(basic, vdaggerv, 0, t_source_1, t_sink, 5);
-      X.construct_3pt(basic, vdaggerv, 1, t_source, t_sink, 6);
+      X.construct_3pt(map_required_Q2, map_required_times, basic, vdaggerv, 0, 
+                      t_source_1, t_sink, 5);
+      X.construct_3pt(map_required_Q2, map_required_times, basic, vdaggerv, 1, 
+                      t_source, t_sink, 6);
 
       // The parallelisation is not done with #pragma omp for because it is 
       // incompatible with auto loops
@@ -49,21 +84,24 @@ void LapH::Correlators::compute_meson_3pt_trace_verbose(LapH::CrossOperator& X) 
         // TODO: Further speedup by different parallelisation might be possible
         for(const auto& i : op.index_pt){
 
+          size_t op_Corr = op_C3[i].index_Corr[0];
+
           #pragma omp task shared(op, i)
           {
           cmplx priv_C3_A(0.0,0.0);
           cmplx priv_C3_B(0.0,0.0);
+
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C3_A += (X(0, op.id, rnd_it[0], rnd_it[1], rnd_it[2]) *
-                            basic.get_operator_u(t_sink, t_source_1/dilT,
-                                  op_C3[i].index_Corr, rnd_it[2], rnd_it[0]))
-                              .trace();
+            priv_C3_A += (X(0, op.id, rnd_it[0], rnd_it[1], rnd_it[2]) *
+                          basic.get_operator_u(t_sink, t_source_1/dilT,
+                                               map_required_u[op_Corr], 
+                                               rnd_it[2], rnd_it[0])).trace();
 
-              priv_C3_B +=  (X(1, op.id, rnd_it[0], rnd_it[1], rnd_it[2]) *
-                            (basic.get_operator_u(t_sink, t_source/dilT, 
-                                  op_C3[i].index_Corr, rnd_it[2], rnd_it[0])))
-                              .trace();
+            priv_C3_B += (X(1, op.id, rnd_it[0], rnd_it[1], rnd_it[2]) *
+                         basic.get_operator_u(t_sink, t_source/dilT, 
+                                              map_required_u[op_Corr], 
+                                              rnd_it[2], rnd_it[0])).trace();
 
           }
           #pragma omp critical
@@ -93,21 +131,51 @@ void LapH::Correlators::compute_meson_3pt_trace(LapH::CrossOperator& X) {
   const std::vector<quark> quarks = global_data->get_quarks();
   const int dilT = quarks[0].number_of_dilution_T;
 
-  const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   const vec_index_3pt op_C3 = global_data->get_lookup_3pt_trace();
-  const vec_index_IO_1 op_C3_IO = global_data->get_lookup_3pt_IO();
   const indexlist_3 rnd_vec_index = global_data->get_rnd_vec_3pt();
 
-  // TODO: must be changed in GlobalData {
-  // TODO: }
+  size_t counter_1 = 0;
+  size_t counter_2 = 0;
+  std::pair<std::map<size_t, size_t>::iterator, bool> ret;
+  map_required_Q2.clear();
+  map_required_d.clear();
+  map_required_times.clear();
+
+  const vec_index_IO_1 op_C3_IO = global_data->get_lookup_3pt_IO();
 
   std::cout << "\n\tcomputing the 3pt function:\r";
   clock_t time = clock();
 
+  for(const auto& op : op_C3_IO){
+    for(const auto& i : op.index_pt){
+      for(const auto q2 : op_C3[i].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter_1));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter_1++;
+      }
+      for(const auto corr : op_C3[i].index_Corr){
+        ret = map_required_d.insert(std::pair<size_t, size_t>(corr, counter_2));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter_2++;
+      }
+    }
+  }
+
+  // only need quarklines without fiertz rearangement
+  map_required_times.insert(std::pair<size_t, size_t>(3, 0));
+  map_required_times.insert(std::pair<size_t, size_t>(4, 1));
+
+  basic.reset_operator();
+  basic.init_operator(map_required_Q2, map_required_times, vdaggerv, peram);
+  basic.init_operator_d(map_required_d, vdaggerv, peram);
+
+  // setting the correlation functions to zero
   std::fill(C3_A_mes.data(), C3_A_mes.data() + C3_A_mes.num_elements(), 
-                                                            cmplx(0.0, 0.0));
+            cmplx(0.0, 0.0));
   std::fill(C3_B_mes.data(), C3_B_mes.data() + C3_B_mes.num_elements(), 
-                                                            cmplx(0.0, 0.0));
+            cmplx(0.0, 0.0));
 
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
     std::cout << "\tcomputing the 3pt function: " 
@@ -118,8 +186,10 @@ void LapH::Correlators::compute_meson_3pt_trace(LapH::CrossOperator& X) {
       const int t_source = (t_sink + 1 + t)%Lt;
       const int t_source_1 = (t_source + 1) % Lt;
 
-      X.construct_3pt(basic, vdaggerv, 0, t_source_1, t_sink, 3);
-      X.construct_3pt(basic, vdaggerv, 1, t_source, t_sink, 4);
+      X.construct_3pt(map_required_Q2, map_required_times, basic, vdaggerv, 0, 
+                      t_source_1, t_sink, 3);
+      X.construct_3pt(map_required_Q2, map_required_times, basic, vdaggerv, 1, 
+                      t_source, t_sink, 4);
 
       // The parallelisation is not done with #pragma omp for because it is 
       // incompatible with auto loops
@@ -132,21 +202,22 @@ void LapH::Correlators::compute_meson_3pt_trace(LapH::CrossOperator& X) {
         // TODO: Further speedup by different parallelisation might be possible
         for(const auto& i : op.index_pt){
 
+          size_t id_Corr = op_C3[i].index_Corr[0];
           #pragma omp task shared(op, i)
           {
           cmplx priv_C3_A(0.0,0.0);
           cmplx priv_C3_B(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C3_A += (X(0, op.id, rnd_it[0], rnd_it[1], rnd_it[2]) *
-                            basic.get_operator_d(t_source/dilT, t_sink,
-                                  op_C3[i].index_Corr, rnd_it[2], rnd_it[0]))
-                              .trace();
+            priv_C3_A += (X(0, op.id, rnd_it[0], rnd_it[1], rnd_it[2]) *
+                          basic.get_operator_d(t_source/dilT, t_sink,
+                                map_required_d[id_Corr], rnd_it[2], rnd_it[0]))
+                            .trace();
 
-              priv_C3_B +=  (X(1, op.id, rnd_it[0], rnd_it[1], rnd_it[2]) *
-                            (basic.get_operator_d(t_source_1/dilT, t_sink, 
-                                  op_C3[i].index_Corr, rnd_it[2], rnd_it[0])))
-                              .trace();
+            priv_C3_B += (X(1, op.id, rnd_it[0], rnd_it[1], rnd_it[2]) *
+                         (basic.get_operator_d(t_source_1/dilT, t_sink, 
+                                               map_required_d[id_Corr], 
+                                               rnd_it[2], rnd_it[0]))).trace();
 
           }
           #pragma omp critical
@@ -176,25 +247,58 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
   const int Lt = global_data->get_Lt();
 
   const vec_index_4pt op_C4 = global_data->get_lookup_4pt_trace();
-  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_c4i10_IO();
   const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_4pt();
   // TODO: must be changed in GlobalData {
   // TODO: }
 
-  std::cout << "\n\tcomputing the traces of 2 pi_+/-:\r";
+  size_t counter = 0;
+  std::pair<std::map<size_t, size_t>::iterator, bool> ret;
+  map_required_Q2.clear();
+  map_required_times.clear();
+
+  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_c4i10_IO();
+
+  std::cout << "\n\tcomputing the 4pt box-diagram:\r";
   clock_t time = clock();
 
+  for(const auto& op : op_C4_IO){
+    for(const auto& i : op.index_pt){
+      for(const auto q2 : op_C4[i].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+      for(const auto corr : op_C4[i].index_Corr){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(corr, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+    }
+  }
+
+  // only need quarklines without fiertz rearangement
+  map_required_times.insert(std::pair<size_t, size_t>(3, 0));
+  map_required_times.insert(std::pair<size_t, size_t>(4, 1));
+
+  basic.reset_operator();
+  basic.init_operator(map_required_Q2, map_required_times, vdaggerv, peram);
+
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
-    std::cout << "\tcomputing the traces of 2 pi_+/-: " 
+    std::cout << "\tcomputing the 4pt box-diagram: " 
         << std::setprecision(2) << (float) t_sink/Lt*100 << "%\r" 
         << std::flush;
     int t_sink_1 = (t_sink + 1) % Lt;
+
     for(int t = 0; t < Lt-1; t++){
       const int t_source = (t_sink + 1 + t)%Lt;
       const int t_source_1 = (t_source + 1) % Lt;
 
-        X.construct(basic, vdaggerv, op_C4_IO, 0, t_source_1, t_sink_1, 3);
-        X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink, t_source, 4);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 0, t_source_1, t_sink_1, 3);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 1, t_sink, t_source, 4);
 
       // The parallelisation is not done with #pragma omp for because it is 
       // incompatible with auto loops
@@ -221,8 +325,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
           cmplx priv_C4(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
+            priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                        X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
           }
           #pragma omp critical
           {
@@ -233,8 +337,11 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       } // end parallel region
 
 
-      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source, t_sink, 4);
-      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink_1, t_source_1, 3);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 0, t_source, t_sink, 4);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 1, t_sink_1, t_source_1, 3);
+
       #pragma omp parallel
       #pragma omp single
       {
@@ -245,8 +352,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
           cmplx priv_C4(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
+            priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                        X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
           }
           #pragma omp critical
           {
@@ -256,8 +363,11 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source_1, t_sink, 3);
-      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink_1, t_source, 3);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 0, t_source_1, t_sink, 3);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 1, t_sink_1, t_source, 3);
+
       #pragma omp parallel
       #pragma omp single
       {
@@ -268,8 +378,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
           cmplx priv_C4(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
+            priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                        X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
           }
           #pragma omp critical
           {
@@ -279,8 +389,11 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source, t_sink_1, 4);
-      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink, t_source_1, 4);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 0, t_source, t_sink_1, 4);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 1, t_sink, t_source_1, 4);
+
       #pragma omp parallel
       #pragma omp single
       {
@@ -291,8 +404,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
           cmplx priv_C4(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
+            priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                        X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
           }
           #pragma omp critical
           {
@@ -302,8 +415,73 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source, t_sink_1, 6);
-      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink_1, t_source, 5);
+    }// loop t_source
+  }// loop t_sink
+
+  std::cout << "\tcomputing the 4pt box-diagram: " << "100.00%" << std::endl;
+  time = clock() - time;
+  std::cout << "\t\tSUCCESS - " << ((float) time)/CLOCKS_PER_SEC 
+            << " seconds" << std::endl;
+
+}
+void LapH::Correlators::compute_meson_4pt_box_trace_verbose(LapH::CrossOperator& X) {
+
+  const int Lt = global_data->get_Lt();
+
+  const vec_index_4pt op_C4 = global_data->get_lookup_4pt_trace();
+  const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_4pt();
+  // TODO: must be changed in GlobalData {
+  // TODO: }
+
+  size_t counter = 0;
+  std::pair<std::map<size_t, size_t>::iterator, bool> ret;
+  map_required_Q2.clear();
+  map_required_times.clear();
+
+  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_c4i10_IO();
+
+  std::cout << "\n\tcomputing the 4pt box-diagram:\r";
+  clock_t time = clock();
+
+  for(const auto& op : op_C4_IO){
+    for(const auto& i : op.index_pt){
+      for(const auto q2 : op_C4[i].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+      for(const auto corr : op_C4[i].index_Corr){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(corr, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+    }
+  }
+
+  // only need quarklines without fiertz rearangement
+  map_required_times.insert(std::pair<size_t, size_t>(5, 0));
+  map_required_times.insert(std::pair<size_t, size_t>(6, 1));
+
+  basic.reset_operator();
+  basic.init_operator_verbose(map_required_Q2, map_required_times, vdaggerv, peram);
+
+  for(int t_sink = 0; t_sink < Lt; ++t_sink){
+    std::cout << "\tcomputing the 4pt box-diagram: " 
+        << std::setprecision(2) << (float) t_sink/Lt*100 << "%\r" 
+        << std::flush;
+    int t_sink_1 = (t_sink + 1) % Lt;
+
+    for(int t = 0; t < Lt-1; t++){
+      const int t_source = (t_sink + 1 + t)%Lt;
+      const int t_source_1 = (t_source + 1) % Lt;
+
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 0, t_source, t_sink_1, 6);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 1, t_sink_1, t_source, 5);
+
       #pragma omp parallel
       #pragma omp single
       {
@@ -314,8 +492,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
           cmplx priv_C4(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
+            priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                        X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
           }
           #pragma omp critical
           {
@@ -325,8 +503,11 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source_1, t_sink, 5);
-      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink, t_source_1, 6);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 0, t_source_1, t_sink, 5);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 1, t_sink, t_source_1, 6);
+
       #pragma omp parallel
       #pragma omp single
       {
@@ -337,8 +518,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
           cmplx priv_C4(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
+            priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                        X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
           }
           #pragma omp critical
           {
@@ -348,8 +529,11 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source, t_sink, 6);
-      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink, t_source, 6);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 0, t_source, t_sink, 6);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 1, t_sink, t_source, 6);
+
       #pragma omp parallel
       #pragma omp single
       {
@@ -360,8 +544,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
           cmplx priv_C4(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
+            priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                        X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
           }
           #pragma omp critical
           {
@@ -371,8 +555,11 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
       }}//loops operators
       } // end parallel region
 
-      X.construct(basic, vdaggerv, op_C4_IO, 0, t_source_1, t_sink_1, 5);
-      X.construct(basic, vdaggerv, op_C4_IO, 1, t_sink_1, t_source_1, 5);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 0, t_source_1, t_sink_1, 5);
+      X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                  op_C4_IO, 1, t_sink_1, t_source_1, 5);
+
       #pragma omp parallel
       #pragma omp single
       {
@@ -383,8 +570,8 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
           cmplx priv_C4(0.0,0.0);
           for(const auto& rnd_it : rnd_vec_index) {
 
-              priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
-                          X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
+            priv_C4 += (X(1, op.id, rnd_it[3], rnd_it[0], rnd_it[1]) *
+                        X(0, op.id, rnd_it[1], rnd_it[2], rnd_it[3])).trace();
           }
           #pragma omp critical
           {
@@ -397,7 +584,7 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
     }// loop t_source
   }// loop t_sink
 
-  std::cout << "\tcomputing the traces of 2 pi_+/-: " << "100.00%" << std::endl;
+  std::cout << "\tcomputing the 4pt box-diagram: " << "100.00%" << std::endl;
   time = clock() - time;
   std::cout << "\t\tSUCCESS - " << ((float) time)/CLOCKS_PER_SEC 
             << " seconds" << std::endl;
@@ -416,6 +603,9 @@ void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
   const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_4pt();
   // TODO: must be changed in GlobalData {
   // TODO: }
+
+  std::map<size_t, size_t> map_required_Q2;
+  std::map<size_t, size_t> map_required_times;
 
   std::cout << "\n\tcomputing the traces of 2 pi_+/-:\r";
   clock_t time = clock();
@@ -444,8 +634,8 @@ void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
 //      }
 //      else{
 //        if(t_source%2 == 0){
-          X.construct(basic, vdaggerv, op_C4_IO, 0, t_source,   t_sink, 2);
-          X.construct(basic, vdaggerv, op_C4_IO, 1, t_source_1, t_sink, 0);
+          X.construct(map_required_Q2, map_required_times, basic, vdaggerv, op_C4_IO, 0, t_source,   t_sink, 2);
+          X.construct(map_required_Q2, map_required_times, basic, vdaggerv, op_C4_IO, 1, t_source_1, t_sink, 0);
 //        }
 //        else{
 //          X.construct(basic, vdaggerv, 0, t_source,   t_sink, 0);

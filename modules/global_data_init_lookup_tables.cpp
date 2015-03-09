@@ -265,7 +265,7 @@ void init_lookup_C3zero_IO(const Correlator_list& correlator_list,
         for(auto op : lookup_3pt){
           // TODO: change lookup_corr[op.index_Q2] to lookup_Q2[op.index_Q2]
           const pdg op1 = lookup_corr[op.index_Q2[0]];
-          const pdg op2 = lookup_corr[op.index_Corr];
+          const pdg op2 = lookup_corr[op.index_Corr[0]];
           const pdg op3 = lookup_corr[op.index_Q2[1]];
 
           if(compare_quantum_numbers_of_pdg(op1, op1_from_list)){
@@ -581,7 +581,7 @@ void init_lookup_3pt(const Correlator_list& correlator_list,
     it2++;
     while(it2 != lookup_3pt.end()) {
       if( (it->index_Q2[0] == it2->index_Q2[0]) && 
-          (it->index_Corr == it2->index_Corr) &&
+          (it->index_Corr[0] == it2->index_Corr[0]) &&
           (it->index_Q2[1] == it2->index_Q2[1]) )
         lookup_3pt.erase(it2);
       else
@@ -598,7 +598,7 @@ void init_lookup_3pt(const Correlator_list& correlator_list,
 
   std::cout << "lookup_3pt" << std::endl;
   for(auto a : lookup_3pt){
-    std::cout << a.id << "\t" << a.index_Q2[0] << "\t" << a.index_Corr 
+    std::cout << a.id << "\t" << a.index_Q2[0] << "\t" << a.index_Corr[0]
               << "\t" << a.index_Q2[1] << std::endl;
   }
 }

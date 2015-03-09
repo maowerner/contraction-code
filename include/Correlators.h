@@ -35,6 +35,12 @@ private:
   LapH::Perambulator peram;
   std::vector<LapH::RandomVector> rnd_vec;
   LapH::VdaggerV vdaggerv;
+
+  std::map<size_t, size_t> map_required_Q2;
+  std::map<size_t, size_t> map_required_u;
+  std::map<size_t, size_t> map_required_d;
+  std::map<size_t, size_t> map_required_times;
+
   array_cd_d2 C4_mes;
   array_cd_d2 C4_Dd_11_mes;
   array_cd_d2 C4_Dd_12_mes;
@@ -65,10 +71,12 @@ private:
                                   cmplx& Q2_trace);
 
   void build_Q1_trace();
-  void build_Q2_trace(const BasicOperator& basic,
+  void build_Q2_trace(BasicOperator& basic,
                       const LapH::VdaggerV& vdaggerv, 
                       const LapH::Perambulator& peram);
-  void build_Q2_trace_uncharged();
+  void build_Q2_trace_uncharged(BasicOperator& basic,
+                      const LapH::VdaggerV& vdaggerv, 
+                      const LapH::Perambulator& peram);
 
   void build_and_write_2pt(const size_t config_i);
   void build_and_write_c2zero(const size_t config_i);
@@ -79,6 +87,7 @@ private:
   void compute_meson_3pt_trace_verbose(LapH::CrossOperator& X);
   void compute_meson_4pt_cross_trace(LapH::CrossOperator& X);
   void compute_meson_4pt_box_trace(LapH::CrossOperator& X);
+  void compute_meson_4pt_box_trace_verbose(LapH::CrossOperator& X);
 
   void write_C3(const size_t config_i);
   void write_C3_verbose(const size_t config_i);

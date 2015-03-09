@@ -67,34 +67,31 @@ void LapH::Correlators::compute_correlators(const size_t config_i){
   // memory for intermediate matrices when building C4_3 (save multiplications)
   LapH::CrossOperator X(2);
 
-  basic.init_operator(vdaggerv, peram);
-//  basic.init_operator_verbose(vdaggerv, peram);
-//  basic.init_operator_u(vdaggerv, peram);
-//  basic.init_operator_d(vdaggerv, peram);
-
   // computing the meson correlator which can be used to compute all small
   // trace combinations for 2pt and 4pt functions
   build_Q2_trace(basic, vdaggerv, peram);
-
+//
 //  build_and_write_2pt(config_i);
   build_and_write_C4_1(config_i);
   build_and_write_C4_2(config_i);
 
 //  build_Q1_trace();
-//  build_Q2_trace_uncharged();
-//  build_and_write_c2zero(config_i);
-//
-//  // computing the meson 4pt big cross trace
-//  // TODO: if condition that at least four random vectos are needed
-//  compute_meson_3pt_trace(X);
-//  write_C3(config_i);
-//  compute_meson_3pt_trace_verbose(X);
-//  write_C3_verbose(config_i);
-//
-////  compute_meson_4pt_cross_trace(X);
-////  write_C4_cross(config_i);
-//  compute_meson_4pt_box_trace(X);
-//  write_C4_box(config_i);
+  build_Q2_trace_uncharged(basic, vdaggerv, peram);
+  build_and_write_c2zero(config_i);
+
+  compute_meson_3pt_trace(X);
+  write_C3(config_i);
+  compute_meson_3pt_trace_verbose(X);
+  write_C3_verbose(config_i);
+
+  // computing the meson 4pt big cross trace
+  // TODO: if condition that at least four random vectos are needed
+//  compute_meson_4pt_cross_trace(X);
+//  write_C4_cross(config_i);
+  compute_meson_4pt_box_trace(X);
+  compute_meson_4pt_box_trace_verbose(X);
+  write_C4_box(config_i);
+
 
 }
 /******************************************************************************/

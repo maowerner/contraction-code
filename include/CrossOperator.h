@@ -22,11 +22,15 @@ public:
   CrossOperator(const size_t number);
   ~CrossOperator() {};
 
-  void construct_3pt(const BasicOperator& basic, const VdaggerV& vdaggerv, 
-                 const size_t nb, const int t_source, const int t_sink,
-                 const size_t type);
+  void construct_3pt(const std::map<size_t, size_t> map_required_Q2,
+                     const std::map<size_t, size_t> map_required_times,
+                     const BasicOperator& basic, const VdaggerV& vdaggerv, 
+                     const size_t nb, const int t_source, const int t_sink,
+                     const size_t type);
 
-  void construct(const BasicOperator& basic, const VdaggerV& vdaggerv, 
+  void construct(const std::map<size_t, size_t> map_required_Q2,
+                 const std::map<size_t, size_t> map_required_times,
+                 const BasicOperator& basic, const VdaggerV& vdaggerv, 
                  const vec_index_IO_1& op_C4_IO, const size_t nb, 
                  const int t_source, const int t_sink, const size_t type);
 

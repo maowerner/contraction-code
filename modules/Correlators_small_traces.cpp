@@ -67,7 +67,7 @@ void LapH::Correlators::build_Q1_trace(){
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void LapH::Correlators::build_Q2_trace(const BasicOperator& basic,
+void LapH::Correlators::build_Q2_trace(BasicOperator& basic,
                                        const LapH::VdaggerV& vdaggerv, 
                                        const LapH::Perambulator& peram){
 
@@ -79,9 +79,10 @@ void LapH::Correlators::build_Q2_trace(const BasicOperator& basic,
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   const indexlist_2 rnd_vec_index = global_data->get_rnd_vec_2pt();
 
-  std::map<size_t, size_t> map_required_Q2;
   size_t counter = 0;
   std::pair<std::map<size_t, size_t>::iterator, bool> ret;
+  map_required_Q2.clear();
+  map_required_times.clear();
 
   const vec_index_IO_1 op_C2_IO = global_data->get_lookup_2pt_IO();
   const vec_index_IO_2 op_C4_1_IO = global_data->get_lookup_4pt_1_IO();
@@ -135,10 +136,11 @@ void LapH::Correlators::build_Q2_trace(const BasicOperator& basic,
     }
   }
 
-  for(const auto& l : map_required_Q2)
-    std::cout << l.first << " " << l.second << std::endl;
+  // only need quarklines without fiertz rearangement
+  map_required_times.insert(std::pair<size_t, size_t>(1, 0));
 
-//  basic.init_operator(vdaggerv, peram);
+  basic.reset_operator();
+  basic.init_operator(map_required_Q2, map_required_times, vdaggerv, peram);
 
   // setting the correlation functions to zero
   std::fill(Q2_trace.data(), Q2_trace.data()+Q2_trace.num_elements(), 
@@ -171,7 +173,8 @@ void LapH::Correlators::build_Q2_trace(const BasicOperator& basic,
           // TODO: Just a workaround
           
           compute_meson_small_traces(id_Corr, basic.get_operator
-            (t_source, t_sink/dilT, 1, id_Q2, rnd_it.first, rnd_it.second),
+            (t_source, t_sink/dilT, map_required_times[1], 
+             map_required_Q2[id_Q2], rnd_it.first, rnd_it.second),
             vdaggerv.return_rvdaggervr(op_Corr[id_Corr].id_rvdvr, t_sink, 
                 rnd_it.second, rnd_it.first),
             Q2_trace[id_Q2][id_Corr][t_source][t_sink]
@@ -199,7 +202,9 @@ void LapH::Correlators::build_Q2_trace(const BasicOperator& basic,
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void LapH::Correlators::build_Q2_trace_uncharged(){
+void LapH::Correlators::build_Q2_trace_uncharged(BasicOperator& basic,
+                                       const LapH::VdaggerV& vdaggerv, 
+                                       const LapH::Perambulator& peram){
 
   const size_t Lt = global_data->get_Lt();
   const std::vector<quark> quarks = global_data->get_quarks();
@@ -209,16 +214,42 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
   const indexlist_2 rnd_vec_index = global_data->get_rnd_vec_2pt();
 
-  std::cout << "\n\tcomputing the traces of pi_+/-:\r";
+  size_t counter = 0;
+  std::pair<std::map<size_t, size_t>::iterator, bool> ret;
+  map_required_u.clear();
+
+  const vec_index_IO_1 op_C2_IO = global_data->get_lookup_c2zero_IO();
+
+  std::cout << "\n\tcomputing the traces of pi_0:\r";
+  clock_t time = clock();
+
+  for(const auto& op : op_C2_IO){
+    for(const auto& i : op.index_pt){
+      for(const auto q2 : op_C2[i].index_Q2){
+        ret = map_required_u.insert(std::pair<size_t, size_t>(q2, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+      for(const auto corr : op_C2[i].index_Corr){
+        ret = map_required_u.insert(std::pair<size_t, size_t>(corr, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+    }
+  }
+
+  basic.reset_operator();
+  basic.init_operator_u(map_required_u, vdaggerv, peram);
 
   // setting the correlation functions to zero
   std::fill(Q2_trace_uncharged.data(), 
             Q2_trace_uncharged.data()+Q2_trace_uncharged.num_elements(), 
             cmplx(.0,.0));
 
-  clock_t time = clock();
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
-    std::cout << "\tcomputing the traces of pi_+/-: " 
+    std::cout << "\tcomputing the traces of pi_0: " 
         << std::setprecision(2) << (float) t_sink/Lt*100 << "%\r" 
         << std::flush;
     for(int t_source = 0; t_source < Lt; ++t_source){
@@ -244,10 +275,11 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
           
           Q2_trace_uncharged[id_Q2][id_Corr][t_source][t_sink][rnd_it.first]
               [rnd_it.second] =
-            (basic.get_operator_d(t_source/dilT, t_sink, id_Q2, 
-              rnd_it.first, rnd_it.second) * 
-            basic.get_operator_d(t_sink/dilT, t_source, id_Corr, 
-              rnd_it.second, rnd_it.first)).trace();
+            (basic.get_operator_u(t_source, t_sink/dilT, map_required_u[id_Q2], 
+                                  rnd_it.first, rnd_it.second) * 
+             basic.get_operator_u(t_sink, t_source/dilT, 
+                                  map_required_u[id_Corr], rnd_it.second, 
+                                  rnd_it.first)).trace();
 
         } // Loop over random vectors ends here! 
 //      #pragma omp taskwait
@@ -261,7 +293,7 @@ void LapH::Correlators::build_Q2_trace_uncharged(){
     }// Loops over t_source
   }// Loops over t_sink
 
-  std::cout << "\tcomputing the traces of pi_+/-: " << "100.00%" << std::endl;
+  std::cout << "\tcomputing the traces of pi_0: " << "100.00%" << std::endl;
   time = clock() - time;
   std::cout << "\t\tSUCCESS - " << ((float) time)/CLOCKS_PER_SEC 
             << " seconds" << std::endl;

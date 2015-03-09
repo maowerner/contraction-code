@@ -227,29 +227,10 @@ static void create_gamma (std::vector<struct lookup>& gamma, const int i) {
 /******************************************************************************/
 BasicOperator::BasicOperator() : gamma(), Q2() {
 
-  const size_t Lt = global_data->get_Lt();
-  const std::vector<quark> quarks = global_data->get_quarks();
-  const size_t nb_rnd = quarks[0].number_of_rnd_vec;
-  const size_t dilT = quarks[0].number_of_dilution_T;
-  const size_t Q2_size = 4 * quarks[0].number_of_dilution_E;
-  
-  const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
-
-  const size_t nb_op = op_Corr.size();
-
   // creating gamma matrices
   gamma.resize(16);
   for(int i = 0; i < 16; ++i)
     create_gamma(gamma, i);
-
-
-  Q1_u.resize(boost::extents[Lt][Lt/dilT][nb_op][nb_rnd][nb_rnd]);
-  std::fill(Q1_u.data(), Q1_u.data() + Q1_u.num_elements(), 
-            Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
-
-  Q1_d.resize(boost::extents[Lt/dilT][Lt][nb_op][nb_rnd][nb_rnd]);
-  std::fill(Q1_d.data(), Q1_d.data() + Q1_d.num_elements(), 
-            Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
 
   std::cout << "\tallocated memory in BasicOperator" << std::endl;
 }
@@ -257,8 +238,24 @@ BasicOperator::BasicOperator() : gamma(), Q2() {
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void BasicOperator::init_operator_verbose(const LapH::VdaggerV& vdaggerv, 
-                                          const LapH::Perambulator& peram){
+void BasicOperator::reset_operator() {
+
+  //TODO Q2.clear(); ??
+  Q2.resize(boost::extents[0][0][0][0][0][1]);
+  Q1_u.resize(boost::extents[0][0][0][0][1]);
+  Q1_d.resize(boost::extents[0][0][0][0][1]);
+
+}
+
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+void BasicOperator::init_operator_verbose(
+                              const std::map<size_t, size_t> map_required_Q2,
+                              const std::map<size_t, size_t> map_required_times,
+                              const LapH::VdaggerV& vdaggerv, 
+                              const LapH::Perambulator& peram){
 
   const int Lt = global_data->get_Lt();
   const size_t nb_ev = global_data->get_number_of_eigen_vec();
@@ -270,10 +267,16 @@ void BasicOperator::init_operator_verbose(const LapH::VdaggerV& vdaggerv,
   
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
 
-  const size_t nb_op = op_Corr.size();
+  const size_t nb_op = map_required_Q2.size();
+  const size_t nb_ti = map_required_times.size();
 
   std::cout << "\n" << std::endl;
   clock_t time = clock();
+
+  Q2.resize(boost::extents[Lt][Lt/dilT][nb_ti][nb_op][nb_rnd][nb_rnd]);
+  std::fill(Q2.data(), Q2.data() + Q2.num_elements(), 
+            Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
+
   #pragma omp parallel 
   {
   Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(Q2_size, 4 * nb_ev);
@@ -287,38 +290,37 @@ void BasicOperator::init_operator_verbose(const LapH::VdaggerV& vdaggerv,
 
     for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
 
-          // ti denotes times of Quarkline:
-          // 5 - t_0 -> t_0-1 -> t  I=1   3pt,4pt
-          // 6 - t_0 -> t_0+1 -> t  I=1   3pt,4pt
-          for(int ti = 5; ti < 7; ti++){
-          // getting the neighbour blocks
-            int tend;
-              tend = ((Lt + t_0 + 2*(5-ti) + 1)%Lt)/dilT;
+      // ti denotes times of Quarkline:
+      // 5 - t_0 -> t_0-1 -> t  I=1   3pt,4pt
+      // 6 - t_0 -> t_0+1 -> t  I=1   3pt,4pt
+      for(const auto& ti : map_required_times){
+      // getting the neighbour blocks
+        int tend;
+        tend = ((Lt + t_0 + 2*(5-ti.first) + 1)%Lt)/dilT;
 
-        for(const auto& op : op_Corr){
+        for(const auto& q2 : map_required_Q2){
           // new momentum -> recalculate M[0]
           // M only depends on momentum and displacement. first_vdv 
           // prevents repeated calculation for different gamma structures
-          if(op.first_vdv == true){
+          if(op_Corr[q2.first].first_vdv == true){
 
             for(size_t col = 0; col < 4; ++col) {
             for(size_t row = 0; row < 4; ++row) {
-              if(op.negative_momentum == false){
+              if(op_Corr[q2.first].negative_momentum == false){
                 M.block(dilE * col, nb_ev * row, dilE, nb_ev) = 
                   (peram[rnd_i].block(nb_ev * (4 * t_0 + row), 
                                       dilE * (4 * tend + col), 
                                       nb_ev, dilE)).adjoint() *
-                  vdaggerv.return_vdaggerv(op.id_vdv, t_0);
+                  vdaggerv.return_vdaggerv(op_Corr[q2.first].id_vdv, t_0);
               }
               else {
                 M.block(dilE * col, nb_ev * row, dilE, nb_ev) = 
-                  (peram[rnd_i].block(nb_ev * (4 * t_0 + row), 
-                                      dilE * (4 * tend + col), 
+                  (peram[rnd_i].block(nb_ev*(4*t_0 + row), dilE*(4*tend + col), 
                                       nb_ev, dilE)).adjoint() *
                   // TODO: calculate V^daggerV Omega from op.negative_momentum 
                   // == false and multiply Omega from the left
                   // and then (V^daggerV Omega)^dagger * Omega
-                  (vdaggerv.return_vdaggerv(op.id_vdv, t_0)).adjoint();
+                  (vdaggerv.return_vdaggerv(op_Corr[q2.first].id_vdv, t_0)).adjoint();
               }  
 
               // gamma_5 trick. It changes the sign of the two upper right and two
@@ -328,30 +330,30 @@ void BasicOperator::init_operator_verbose(const LapH::VdaggerV& vdaggerv,
             }}// loops over row and col end here
           }//if over same gamma structure ends here
 
-      for(int t = 0; t < Lt/dilT; t++){
-          for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
-            if(rnd_i != rnd_j){
+          for(int t = 0; t < Lt/dilT; t++){
+            for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
+              if(rnd_i != rnd_j){
 
-              //dilution of d-quark from left
-              for(size_t block_dil = 0; block_dil < 4; block_dil++){
-                cmplx value = 1.;
-                value_dirac(op.id, block_dil, value);
+                //dilution of d-quark from left
+                for(size_t block_dil = 0; block_dil < 4; block_dil++){
+                  cmplx value = 1.;
+                  value_dirac(q2.first, block_dil, value);
 
                   for(size_t row = 0; row < 4; row++){
                   for(size_t col = 0; col < 4; col++){
 
-                    Q2[t_0][t][ti][op.id][rnd_i][rnd_j]
+                    Q2[t_0][t][ti.second][q2.second][rnd_i][rnd_j]
                         .block(row*dilE, col*dilE, dilE, dilE) += value *
-                      M.block(row*dilE, order_dirac(op.id, block_dil)* nb_ev, dilE, nb_ev) * 
+                      M.block(row*dilE, order_dirac(q2.first, block_dil)* nb_ev, dilE, nb_ev) * 
                       peram[rnd_j]
                         .block(4*nb_ev*t_0 + block_dil*nb_ev, 
                           Q2_size*t + col*dilE, nb_ev, dilE);
 
               }}}//dilution ends here
 
-          }}}// loops over rnd_j and ti block end here 
+          }}}// loops over rnd_j and t block end here 
         }//loop operators
-      }// loop over t ends here
+      }// loop over ti ends here
     }// loop over rnd_i ends here
   }// loops over t_0 ends here
   }// pragma omp ends
@@ -365,8 +367,11 @@ void BasicOperator::init_operator_verbose(const LapH::VdaggerV& vdaggerv,
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void BasicOperator::init_operator(const LapH::VdaggerV& vdaggerv, 
-                                  const LapH::Perambulator& peram){
+void BasicOperator::init_operator(
+                              const std::map<size_t, size_t> map_required_Q2,
+                              const std::map<size_t, size_t> map_required_times,
+                              const LapH::VdaggerV& vdaggerv, 
+                              const LapH::Perambulator& peram){
 
   const int Lt = global_data->get_Lt();
   const size_t nb_ev = global_data->get_number_of_eigen_vec();
@@ -378,12 +383,13 @@ void BasicOperator::init_operator(const LapH::VdaggerV& vdaggerv,
   
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
 
-  const size_t nb_op = op_Corr.size();
+  const size_t nb_op = map_required_Q2.size();
+  const size_t nb_ti = map_required_times.size();
 
   std::cout << "\n" << std::endl;
   clock_t time = clock();
 
-  Q2.resize(boost::extents[Lt][Lt/dilT][7][nb_op][nb_rnd][nb_rnd]);
+  Q2.resize(boost::extents[Lt][Lt/dilT][nb_ti][nb_op][nb_rnd][nb_rnd]);
   std::fill(Q2.data(), Q2.data() + Q2.num_elements(), 
             Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
 
@@ -401,20 +407,20 @@ void BasicOperator::init_operator(const LapH::VdaggerV& vdaggerv,
     for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
       for(int t = 0; t < Lt/dilT; t++){
 
-        for(const auto& op : op_Corr){
+        for(const auto& q2 : map_required_Q2){
           // new momentum -> recalculate M[0]
           // M only depends on momentum and displacement. first_vdv 
           // prevents repeated calculation for different gamma structures
-          if(op.first_vdv == true){
+          if(op_Corr[q2.first].first_vdv == true){
 
             for(size_t col = 0; col < 4; ++col) {
             for(size_t row = 0; row < 4; ++row) {
-              if(op.negative_momentum == false){
+              if(op_Corr[q2.first].negative_momentum == false){
                 M.block(dilE * col, nb_ev * row, dilE, nb_ev) = 
                   (peram[rnd_i].block(nb_ev * (4 * t_0 + row), 
                                       dilE * (4 * t + col), 
                                       nb_ev, dilE)).adjoint() *
-                  vdaggerv.return_vdaggerv(op.id_vdv, t_0);
+                  vdaggerv.return_vdaggerv(op_Corr[q2.first].id_vdv, t_0);
               }
               else {
                 M.block(dilE * col, nb_ev * row, dilE, nb_ev) = 
@@ -424,7 +430,7 @@ void BasicOperator::init_operator(const LapH::VdaggerV& vdaggerv,
                   // TODO: calculate V^daggerV Omega from op.negative_momentum 
                   // == false and multiply Omega from the left
                   // and then (V^daggerV Omega)^dagger * Omega
-                  (vdaggerv.return_vdaggerv(op.id_vdv, t_0)).adjoint();
+                  (vdaggerv.return_vdaggerv(op_Corr[q2.first].id_vdv, t_0)).adjoint();
               }  
 
               // gamma_5 trick. It changes the sign of the two upper right and two
@@ -440,35 +446,36 @@ void BasicOperator::init_operator(const LapH::VdaggerV& vdaggerv,
           // 2 - t -> t_0 -> t+1    I=2   4pt
           // 3 - t -> t_0 -> t_0-1  I=1   3pt,4pt
           // 4 - t -> t_0 -> t_0+1  I=1   3pt,4pt
-          for(int ti = 1; ti < 5; ti++){                                        //!!!!!!!!!!!!1
-            if(ti != 2){
-          // getting the neighbour blocks
+          for(const auto& ti : map_required_times){
+            // getting the neighbour blocks
             int tend;
-            if(ti < 3)
-              tend = (Lt/dilT+t + ti - 1)%(Lt/dilT);  
+            if(ti.first < 3)
+              tend = (Lt/dilT+t + ti.first - 1)%(Lt/dilT);  
             else
-              tend = ((Lt + t_0 + 2*(ti-3) - 1)%Lt)/dilT;
-          for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
-            if(rnd_i != rnd_j){
+              tend = ((Lt + t_0 + 2*(ti.first-3) - 1)%Lt)/dilT;
 
-              //dilution of d-quark from left
-              for(size_t block_dil = 0; block_dil < 4; block_dil++){
-                cmplx value = 1.;
-                value_dirac(op.id, block_dil, value);
+            for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
+              if(rnd_i != rnd_j){
+
+                //dilution of d-quark from left
+                for(size_t block_dil = 0; block_dil < 4; block_dil++){
+                  cmplx value = 1.;
+                  value_dirac(q2.first, block_dil, value);
 
                   for(size_t row = 0; row < 4; row++){
                   for(size_t col = 0; col < 4; col++){
 
-                    Q2[t_0][t][ti][op.id][rnd_i][rnd_j]
+                    Q2[t_0][t][ti.second][q2.second][rnd_i][rnd_j]
                         .block(row*dilE, col*dilE, dilE, dilE) += value *
-                      M.block(row*dilE, order_dirac(op.id, block_dil)* nb_ev, dilE, nb_ev) * 
+                      M.block(row*dilE, order_dirac(q2.first, block_dil)* nb_ev, 
+                              dilE, nb_ev) * 
                       peram[rnd_j]
                         .block(4*nb_ev*t_0 + block_dil*nb_ev, 
-                          Q2_size*tend + col*dilE, nb_ev, dilE);
+                               Q2_size*tend + col*dilE, nb_ev, dilE);
 
               }}}}//dilution ends here
 
-          }}}// loops over rnd_j and ti block end here 
+          }}// loops over rnd_j and ti block end here 
         }//loop operators
       }// loop over t ends here
     }// loop over rnd_i ends here
@@ -484,7 +491,8 @@ void BasicOperator::init_operator(const LapH::VdaggerV& vdaggerv,
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void BasicOperator::init_operator_u(const LapH::VdaggerV& vdaggerv, 
+void BasicOperator::init_operator_u(const std::map<size_t, size_t> map_required_u,
+                                    const LapH::VdaggerV& vdaggerv, 
                                     const LapH::Perambulator& peram){
 
   const int Lt = global_data->get_Lt();
@@ -497,10 +505,15 @@ void BasicOperator::init_operator_u(const LapH::VdaggerV& vdaggerv,
   
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
 
-  const size_t nb_op = op_Corr.size();
+  const size_t nb_op = map_required_u.size();
 
   std::cout << "\n" << std::endl;
   clock_t time = clock();
+
+  Q1_u.resize(boost::extents[Lt][Lt/dilT][nb_op][nb_rnd][nb_rnd]);
+  std::fill(Q1_u.data(), Q1_u.data() + Q1_u.num_elements(), 
+            Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
+
   #pragma omp parallel 
   {
 //  Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(Q2_size, 4 * nb_ev);
@@ -512,7 +525,7 @@ void BasicOperator::init_operator_u(const LapH::VdaggerV& vdaggerv,
                 << std::setprecision(2) << (float) t_0/Lt*100 << "%\r" 
                 << std::flush;
 
-    for(const auto& op : op_Corr){
+    for(const auto& u : map_required_u){
 
       for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
       for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
@@ -524,25 +537,14 @@ void BasicOperator::init_operator_u(const LapH::VdaggerV& vdaggerv,
           //dilution of u-quark from left
           for(size_t block_dil = 0; block_dil < 4; block_dil++){
             cmplx value = 1.;
-            value_dirac(op.id, block_dil, value);
+            value_dirac(u.first, block_dil, value);
 
-//            for(size_t col = 0; col < 4; col++){
-
-//               Q1_u[t_0][t][op.id][rnd_i][rnd_j]
-//                   .block(block_dil*dilE, 0, dilE, 4*dilE) += value * 
-//                 vdaggerv.return_rvdaggerv(op.id_rvdvr, t_0, rnd_i).block(0, 
-//                     block_dil* nb_ev, dilE, nb_ev) * 
-//                 peram[rnd_j].block(4*nb_ev*t_0 + order_dirac(op.id, block_dil) *
-////                     nb_ev, Q2_size*t + col*dilE, nb_ev, dilE);
-//                     nb_ev, Q2_size*t, nb_ev, 4*dilE);
-
-               Q1_u[t_0][t][op.id][rnd_i][rnd_j]
-                   .block(order_dirac(op.id, block_dil)*dilE, 0, dilE, 4*dilE) += value * 
-                 vdaggerv.return_rvdaggerv(op.id_rvdvr, t_0, rnd_i).block(0, 
-                     order_dirac(op.id, block_dil)* nb_ev, dilE, nb_ev) * 
-                 peram[rnd_j].block(4*nb_ev*t_0 + block_dil *
-//                     nb_ev, Q2_size*t + col*dilE, nb_ev, dilE);
-                     nb_ev, Q2_size*t, nb_ev, 4*dilE);
+              Q1_u[t_0][t][u.second][rnd_i][rnd_j].block(order_dirac(u.first, 
+                  block_dil)*dilE, 0, dilE, 4*dilE) += value * 
+                vdaggerv.return_rvdaggerv(op_Corr[u.first].id_rvdvr, t_0, rnd_i)
+                  .block(0, order_dirac(u.first, block_dil)*nb_ev, dilE, nb_ev) * 
+                peram[rnd_j].block(4*nb_ev*t_0 + block_dil*nb_ev, Q2_size*t, 
+                                   nb_ev, 4*dilE);
 
           }//dilution ends here
         }// loop over t ends here
@@ -560,7 +562,8 @@ void BasicOperator::init_operator_u(const LapH::VdaggerV& vdaggerv,
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void BasicOperator::init_operator_d(const LapH::VdaggerV& vdaggerv, 
+void BasicOperator::init_operator_d(const std::map<size_t, size_t> map_required_d,
+                                    const LapH::VdaggerV& vdaggerv, 
                                     const LapH::Perambulator& peram){
 
   const int Lt = global_data->get_Lt();
@@ -573,13 +576,17 @@ void BasicOperator::init_operator_d(const LapH::VdaggerV& vdaggerv,
   
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
 
-  const size_t nb_op = op_Corr.size();
+  const size_t nb_op = map_required_d.size();
 
   std::cout << "\n" << std::endl;
   clock_t time = clock();
+
+  Q1_d.resize(boost::extents[Lt/dilT][Lt][nb_op][nb_rnd][nb_rnd]);
+  std::fill(Q1_d.data(), Q1_d.data() + Q1_d.num_elements(), 
+            Eigen::MatrixXcd::Zero(Q2_size, Q2_size));
+
   #pragma omp parallel 
   {
-//  Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(Q2_size, 4 * nb_ev);
   #pragma omp for schedule(dynamic)
   for(int t_0 = 0; t_0 < Lt/dilT; t_0++){
 
@@ -588,7 +595,7 @@ void BasicOperator::init_operator_d(const LapH::VdaggerV& vdaggerv,
                 << std::setprecision(2) << (float) t_0/Lt*100 << "%\r" 
                 << std::flush;
 
-    for(const auto& op : op_Corr){
+    for(const auto& d : map_required_d){
 
       for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
       for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j) {
@@ -600,26 +607,25 @@ void BasicOperator::init_operator_d(const LapH::VdaggerV& vdaggerv,
           //dilution of u-quark from left
           for(size_t block_dil = 0; block_dil < 4; block_dil++){
             cmplx value = 1.;
-            value_dirac(op.id, block_dil, value);
+            value_dirac(d.first, block_dil, value);
 
-//            for(size_t col = 0; col < 4; col++){
-              Q1_d[t_0][t][op.id][rnd_i][rnd_j]
+              Q1_d[t_0][t][d.second][rnd_i][rnd_j]
                   .block(0, block_dil*dilE, 4*dilE, dilE) += value * 
-                (peram[rnd_i].block(4*nb_ev*t + order_dirac(op.id, block_dil) *
-//                  nb_ev, Q2_size*t_0 + order_dirac(op.id, col)*dilE, 
+                (peram[rnd_i].block(4*nb_ev*t + order_dirac(d.first, block_dil) *
                   nb_ev, Q2_size*t_0 , 
                   nb_ev, 4*dilE)).adjoint() *
-                vdaggerv.return_vdaggervr(op.id_rvdvr, t, rnd_j).block(0, 
-//                  order_dirac(op.id, block_dil)*dilE, nb_ev, dilE);
+                vdaggerv.return_vdaggervr(op_Corr[d.first].id_rvdvr, t, rnd_j).block(0, 
                   block_dil*dilE, nb_ev, dilE);
 
           }//dilution ends here
 
+          // gamma_5 trick
           for(size_t row = 0; row < 4; row++)
           for(size_t col = 0; col < 4; col++)
             if( ((row + col) == 3) || (abs(row - col) > 1) )
-              Q1_d[t_0][t][op.id][rnd_i][rnd_j]
+              Q1_d[t_0][t][d.second][rnd_i][rnd_j]
                 .block(row*dilE, col*dilE, dilE, dilE) *= -1.;
+
         }// loop over t ends here
      }}// loop over rnd ends here
     }//loop operators

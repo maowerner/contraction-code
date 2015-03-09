@@ -25,10 +25,13 @@ LapH::CrossOperator::CrossOperator(const size_t number) : X(number) {
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void LapH::CrossOperator::construct_3pt(const BasicOperator& basic, 
-                                    const VdaggerV& vdaggerv, const size_t nb,
-                                    const int t_source, const int t_sink,
-                                    const size_t type){
+void LapH::CrossOperator::construct_3pt(
+                                std::map<size_t, size_t> map_required_Q2,
+                                std::map<size_t, size_t> map_required_times,
+                                const BasicOperator& basic, 
+                                const VdaggerV& vdaggerv, const size_t nb,
+                                const int t_source, const int t_sink,
+                                const size_t type){
 
   const int Lt = global_data->get_Lt();
   const std::vector<quark> quarks = global_data->get_quarks();
@@ -73,31 +76,30 @@ void LapH::CrossOperator::construct_3pt(const BasicOperator& basic,
 
 //    size_t id_Q2_0 = op_C3[i].index_Q2[(4-type+1)%2];
 //    size_t id_Q2_1 = op_C3[i].index_Q2[4-type];
-    size_t id_Q2_0 = op_C3[i].index_Q2[1];
-    size_t id_Q2_1 = op_C3[i].index_Q2[0];
-    size_t id_Corr = op_C3[i].index_Corr;
-    if(type < 5){
-//      id_Q2_1 = op_C3[i].index_Q2[0];
+    size_t id_Q2_0 = op_C3[i].index_Q2[0];
+    size_t id_Q2_1 = op_C3[i].index_Q2[1];
+    size_t id_Corr = op_C3[i].index_Corr[0];
 
+    if(type < 5){
       #pragma omp task shared (op)
       for(auto& rnd_it : rnd_vec_index) {
-        compute_X(basic, id_Q2_1, 
-                  basic.get_operator(t_source, tu, td, id_Q2_0, rnd_it[0], rnd_it[1]),
-                  vdaggerv.return_rvdaggervr(op_Corr[id_Q2_1].id_rvdvr, t2, 
-                      rnd_it[1], rnd_it[2]),
-                  X[nb][op.id][rnd_it[0]][rnd_it[1]][rnd_it[2]]);
+        compute_X(basic, id_Q2_0, 
+            basic.get_operator(t_source, tu, map_required_times[td], 
+                               map_required_Q2[id_Q2_1], rnd_it[0], rnd_it[1]),
+            vdaggerv.return_rvdaggervr(op_Corr[id_Q2_0].id_rvdvr, t2, rnd_it[1], 
+                                       rnd_it[2]),
+            X[nb][op.id][rnd_it[0]][rnd_it[1]][rnd_it[2]]);
       } // loop over random vectors
     }
     else{
-      
       #pragma omp task shared (op)
       for(auto& rnd_it : rnd_vec_index) {
-        compute_X_verbose(basic, id_Q2_0, 
-                  basic.get_operator(t2, tu, td, id_Q2_1, rnd_it[1], rnd_it[2]),
-                  vdaggerv.return_rvdaggervr(op_Corr[id_Q2_0].id_rvdvr, t_source, 
-                      rnd_it[0], rnd_it[1]),
-                  X[nb][op.id][rnd_it[0]][rnd_it[1]][rnd_it[2]]);
-
+        compute_X_verbose(basic, id_Q2_1, 
+            basic.get_operator(t2, tu, map_required_times[td], 
+                               map_required_Q2[id_Q2_0], rnd_it[1], rnd_it[2]),
+            vdaggerv.return_rvdaggervr(op_Corr[id_Q2_1].id_rvdvr, t_source, 
+                                       rnd_it[0], rnd_it[1]),
+            X[nb][op.id][rnd_it[0]][rnd_it[1]][rnd_it[2]]);
       } // loop over random vectors
     }
 
@@ -108,12 +110,13 @@ void LapH::CrossOperator::construct_3pt(const BasicOperator& basic,
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-void LapH::CrossOperator::construct(const BasicOperator& basic, 
+void LapH::CrossOperator::construct(std::map<size_t, size_t> map_required_Q2,
+                                    std::map<size_t, size_t> map_required_times,
+                                    const BasicOperator& basic, 
                                     const VdaggerV& vdaggerv, 
                                     const vec_index_IO_1& op_C4_IO, 
-                                    const size_t nb,
-                                    const int t_source, const int t_sink,
-                                    const size_t type){
+                                    const size_t nb, const int t_source, 
+                                    const int t_sink, const size_t type){
 
   const int Lt = global_data->get_Lt();
   const std::vector<quark> quarks = global_data->get_quarks();
@@ -193,20 +196,22 @@ void LapH::CrossOperator::construct(const BasicOperator& basic,
       #pragma omp task shared (op)
       for(auto& rnd_it : rnd_vec_index) {
         compute_X(basic, id_Corr, 
-                  basic.get_operator(t_source, tu, td, id_Q2, rnd_it[0], rnd_it[1]),
-                  vdaggerv.return_rvdaggervr(op_Corr[id_Corr].id_rvdvr, t2, 
-                      rnd_it[1], rnd_it[2]),
-                  X[nb][op.id][rnd_it[0]][rnd_it[1]][rnd_it[2]]);
-      } // loop over random vectors
+            basic.get_operator(t_source, tu, map_required_times[td], 
+                               map_required_Q2[id_Q2], rnd_it[0], rnd_it[1]),
+            vdaggerv.return_rvdaggervr(op_Corr[id_Corr].id_rvdvr, t2, 
+                                       rnd_it[1], rnd_it[2]),
+            X[nb][op.id][rnd_it[0]][rnd_it[1]][rnd_it[2]]);
+      } // lover random vectors
     }
     else{
       #pragma omp task shared (op)
       for(auto& rnd_it : rnd_vec_index) {
         compute_X_verbose(basic, id_Q2, 
-                  basic.get_operator(t2, tu, td, id_Corr, rnd_it[1], rnd_it[2]),
-                  vdaggerv.return_rvdaggervr(op_Corr[id_Q2].id_rvdvr, t_source, 
-                      rnd_it[0], rnd_it[1]),
-                  X[nb][op.id][rnd_it[0]][rnd_it[1]][rnd_it[2]]);
+            basic.get_operator(t2, tu, map_required_times[td], 
+                               map_required_Q2[id_Corr], rnd_it[1], rnd_it[2]),
+            vdaggerv.return_rvdaggervr(op_Corr[id_Q2].id_rvdvr, t_source, 
+                                       rnd_it[0], rnd_it[1]),
+            X[nb][op.id][rnd_it[0]][rnd_it[1]][rnd_it[2]]);
 
       } // loop over random vectors
     }
@@ -250,7 +255,7 @@ void LapH::CrossOperator::compute_X(const BasicOperator& basic,
 //      value * Q2.block(0, basic.order_dirac(id_Corr, block*dilE), 4*dilE, dilE) * 
       value * Q2.block(0, block*dilE, 4*dilE, dilE) * 
       rVdaggerVr.block(block*dilE,
-basic.order_dirac(id_Corr, block)*dilE, 
+      basic.order_dirac(id_Corr, block)*dilE, 
           dilE, dilE);
 
     }// loop block ends here

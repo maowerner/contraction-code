@@ -21,16 +21,24 @@ public:
   BasicOperator();
   ~BasicOperator () {};
 
-  void init_operator(const LapH::VdaggerV& vdaggerv,
-                     const LapH::Perambulator& peram);
+  void reset_operator();
 
-  void init_operator_verbose(const LapH::VdaggerV& vdaggerv,
+  void init_operator_verbose(const std::map<size_t, size_t> map_required_Q2,
+                             const std::map<size_t, size_t> map_required_times,
+                             const LapH::VdaggerV& vdaggerv,
                              const LapH::Perambulator& peram);
 
-  void init_operator_u(const LapH::VdaggerV& vdaggerv,
+  void init_operator(const std::map<size_t, size_t> map_required_Q2,
+                     const std::map<size_t, size_t> map_required_times,
+                     const LapH::VdaggerV& vdaggerv,
+                     const LapH::Perambulator& peram);
+
+  void init_operator_u(const std::map<size_t, size_t> map_required_u,
+                       const LapH::VdaggerV& vdaggerv,
                        const LapH::Perambulator& peram);
 
-  void init_operator_d(const LapH::VdaggerV& vdaggerv,
+  void init_operator_d(const std::map<size_t, size_t> map_required_d,
+                       const LapH::VdaggerV& vdaggerv,
                        const LapH::Perambulator& peram);
 
 
