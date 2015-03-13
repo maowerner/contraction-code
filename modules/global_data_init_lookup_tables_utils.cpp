@@ -6,6 +6,8 @@ namespace {
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
+// helper functions
 static void copy_quantum_numbers(const pdg& in, std::array<int, 6>& out){
 
   out[0] = in.dis3[0];
@@ -20,6 +22,8 @@ static void copy_quantum_numbers(const pdg& in, std::array<int, 6>& out){
 
 namespace global_data_utils {
 
+// helper functions to execute vector addition with arrays. 
+// TODO: use std::vector?
 std::array<int, 3> add_p3(const pdg& in1, const pdg& in2){
 
   std::array<int, 3> result;
@@ -30,6 +34,8 @@ std::array<int, 3> add_p3(const pdg& in1, const pdg& in2){
   return result;
 }
 
+// helper functions to obtain absolute values of the momentum of a certain
+// lookup_corr number.
 int abs_p3(const pdg& in){
 
   int result = 0;
@@ -40,6 +46,8 @@ int abs_p3(const pdg& in){
   return result;
 }
 
+// helper function to obtain absolute value of array like for vectors
+// TODO: use std::vector?
 int abs_p3(const std::array<int, 3> in){
 
   int result = 0;
@@ -53,6 +61,7 @@ int abs_p3(const std::array<int, 3> in){
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
 // function that compares two pdg structs and checks if the corresponding 
 // entries of lookup_corr coincide
 bool compare_quantum_numbers_of_pdg(const pdg& in1, const pdg& in2){
@@ -68,6 +77,9 @@ bool compare_quantum_numbers_of_pdg(const pdg& in1, const pdg& in2){
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
+// function that compares two pdg structs and checks if the corresponding 
+// momenta and displacements coincide
 bool compare_mom_dis_of_pdg(const pdg& in1, const pdg& in2){
 
   if( (in1.p3 == in2.p3) && 
@@ -81,6 +93,7 @@ bool compare_mom_dis_of_pdg(const pdg& in1, const pdg& in2){
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
 // function that compares a pdg struct with an operator as defined by the input
 // file and checkes if the quantum numbers of pdg are contained in the physical
 // situation described by the operator
@@ -105,6 +118,8 @@ bool compare_quantum_numbers_of_pdg(const pdg& in1, const Operators& in2){
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
+// comparision function for lists of size_t
 bool compare_index_list(index_IO_1& in1, index_IO_1& in2) {
 
   if(in1.index_pt.size() != in2.index_pt.size())
@@ -126,6 +141,8 @@ bool compare_index_list(index_IO_1& in1, index_IO_1& in2) {
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
+// comparision function for lists of two size_t's
 bool compare_index_list(index_IO_2& in1, index_IO_2& in2) {
 
   if(in1.index_pt.size() != in2.index_pt.size())
@@ -147,6 +164,13 @@ bool compare_index_list(index_IO_2& in1, index_IO_2& in2) {
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
+// function that sets the indices of lookup_vdv and lookup_rvdvr. These are 
+// different from lookup_corr as V^dagger*V is independent of the gamma 
+// structure it thus is not necessary to calculate this quantity for every 
+// operator. Additionally momenta related by a factor (-1) can be obtained by
+// daggering V^dagger*V. This function truncates lookup_corr to only contain
+// the necessary indices.
 void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
                     vec_pd_rVdaggerVr& lookup_rvdvr) {
 
@@ -223,7 +247,8 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
         // VdaggerV can be obtained from the negative momentum.
         else{
           for(const auto& op2 : lookup_corr){
-            if( (op2.negative_momentum == true) && (op2.id_vdv == fast_counter_vdv) ){
+            if( (op2.negative_momentum == true) && 
+                (op2.id_vdv == fast_counter_vdv) ){
               op.first_vdv = false;
               break;
             }
@@ -258,20 +283,28 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
   lookup_vdv.resize(vdaggerv_qu_nb.size());
   lookup_rvdvr.resize(rvdaggervr_qu_nb.size());
 
+  // set identification number of lookup_vdv and corresponding index of 
+  // lookup_corr to be able to relate to the quantum numbers
   size_t counter = 0;
   for(auto& op_vdv : lookup_vdv){
     op_vdv.id = counter;
     for(const auto& op : lookup_corr){
-      if((counter == op.id_vdv) && (op.first_vdv == true) && (op.negative_momentum == false) )
+      if( (counter == op.id_vdv) && (op.first_vdv == true) && 
+          (op.negative_momentum == false) )
         op_vdv.index = op.id;
     }
     counter++;
   }
 
+  // test output
   std::cout << "lookup_vdv" << std::endl;
   for(const auto& op_vdv : lookup_vdv)
     std::cout << op_vdv.id << "\t" << op_vdv.index << std::endl;
 
+  // set identification number of lookup_rvdvr and corresponding index of 
+  // lookup_corr to be able to relate to the quantum numbers. Also set adjoint
+  // flag and id in case the opposite momentum is also built and can be 
+  // obtained from adjoining
   counter = 0;
   for(auto& op_rvdvr : lookup_rvdvr){
     op_rvdvr.id = counter;
@@ -292,6 +325,7 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
     counter++;
   }
 
+  // test output
   std::cout << "lookup_rvdvr" << std::endl;
   for(const auto& op_rvdvr : lookup_rvdvr)
     std::cout << op_rvdvr.id << "\t" << op_rvdvr.adjoint << "\t" 
@@ -301,6 +335,11 @@ void set_index_corr(vec_pdg_Corr& lookup_corr, vec_pd_VdaggerV& lookup_vdv,
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
+// for the 2pt function a list of all quantum numbers specified in the infile 
+// for any 2pt correlator is writen in lookup_2pt. This function takes two 
+// operators for source and sink and adds all quantum numbers they contain to
+// lookup_2pt
 void set_index_2pt(const Operators& in1, const Operators& in2, 
                    const vec_pdg_Corr& lookup_corr, vec_index_2pt& lookup_2pt) {
 
@@ -323,6 +362,11 @@ void set_index_2pt(const Operators& in1, const Operators& in2,
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
+// for the 3pt function a list of all quantum numbers specified in the infile 
+// for any 3pt correlator is writen in lookup_3pt. This function takes two 
+// operators for source and one for sink and adds all quantum numbers they 
+// contain to lookup_3pt
 void set_index_3pt(const Operators& in1, const Operators& in2, 
                    const Operators& in3, const vec_pdg_Corr& lookup_corr, 
                    vec_index_3pt& lookup_3pt) {
@@ -338,17 +382,33 @@ void set_index_3pt(const Operators& in1, const Operators& in2,
       for(const auto& op3 : lookup_corr){
       if(compare_quantum_numbers_of_pdg(op3, in3)){
 
-        // enforce cm momentum conservation
+// HERE THE REFERENCE FRAME IS STILL HARDCODED! ONLY COMMENT IN ONE BLOCK OF IF 
+// STATEMENTS FOR THE DESIRED MOVING FRAME AND CHOOSE THE SAME IN 
+// set_index_4pt() AND THE INFILE
+
+
+        // only include quantum numbers, if momenta correspond to CMS system
 //        if( (add_p3(op1, op3) == zero) && (abs_p3(op2) == 0) ){
           
-//          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
-//          if( (abs_p3(add_p3(op1, op3)) == 1) && 
-//              (op2_p3 == add_p3(op1, op3)) ){
+        // only include quantum numbers, if momenta correspond to first moving 
+        // frame
+        std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+        if( (abs_p3(add_p3(op1, op3)) == 1) && 
+            (op2_p3 == add_p3(op1, op3)) ){
 
-          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
-          if( (((abs_p3(op1) == 2) && (abs_p3(op3) == 0)) || 
-              ((abs_p3(op1) == 0) && (abs_p3(op3) == 2))) &&
-              (op2_p3 == add_p3(op1, op3)) ){
+        // only include quantum numbers, if momenta correspond to second moving
+        // frame
+//        std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//        if( (((abs_p3(op1) == 2) && (abs_p3(op3) == 0)) || 
+//            ((abs_p3(op1) == 0) && (abs_p3(op3) == 2))) &&
+//            (op2_p3 == add_p3(op1, op3)) ){
+
+        // only include quantum numbers, if momenta correspond to third moving
+        // frame
+//        std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//        if( (((abs_p3(op1) == 3) && (abs_p3(op3) == 0)) || 
+//            ((abs_p3(op1) == 0) && (abs_p3(op3) == 3))) &&
+//            (op2_p3 == add_p3(op1, op3)) ){
 
           write.index_Q2[0] = op1.id;
           write.index_Corr[0]  = op2.id;
@@ -366,6 +426,11 @@ void set_index_3pt(const Operators& in1, const Operators& in2,
 // *****************************************************************************
 // *****************************************************************************
 // *****************************************************************************
+
+// for the 4pt function a list of all quantum numbers specified in the infile 
+// for any 4pt correlator is writen in lookup_4pt. This function takes four
+// operators for source and sink and adds all quantum numbers they contain to
+// lookup_4pt
 void set_index_4pt(const Operators& in1, const Operators& in2, 
                    const Operators& in3, const Operators& in4,
                    const vec_pdg_Corr& lookup_corr, vec_index_4pt& lookup_4pt) {
@@ -383,21 +448,39 @@ void set_index_4pt(const Operators& in1, const Operators& in2,
         for(const auto& op4 : lookup_corr){
         if(compare_quantum_numbers_of_pdg(op4, in4)){
 
-          // enforce cm momentum conservation
+// HERE THE REFERENCE FRAME IS STILL HARDCODED! ONLY COMMENT IN ONE BLOCK OF IF 
+// STATEMENTS FOR THE DESIRED MOVING FRAME AND CHOOSE THE SAME IN 
+// set_index_4pt() AND THE INFILE
+
+          // only include quantum numbers, if momenta correspond to CMS system
 //          if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
 
-//          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
-//          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
-//          if( (abs_p3(add_p3(op1, op3)) == 1) && (abs_p3(add_p3(op2, op4)) == 1)
-//              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
-
+          // only include quantum numbers, if momenta correspond to first moving 
+          // frame
           std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
           std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
-          if( (((abs_p3(op1) == 2) && (abs_p3(op3) == 0)) || 
-              ((abs_p3(op1) == 0) && (abs_p3(op3) == 2))) &&
-              (((abs_p3(op2) == 2) && (abs_p3(op4) == 0)) || 
-              ((abs_p3(op2) == 0) && (abs_p3(op4) == 2)))
+          if( (abs_p3(add_p3(op1, op3)) == 1) && (abs_p3(add_p3(op2, op4)) == 1)
               && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
+
+          // only include quantum numbers, if momenta correspond to second moving 
+          // frame
+//          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
+//          if( (((abs_p3(op1) == 2) && (abs_p3(op3) == 0)) || 
+//              ((abs_p3(op1) == 0) && (abs_p3(op3) == 2))) &&
+//              (((abs_p3(op2) == 2) && (abs_p3(op4) == 0)) || 
+//              ((abs_p3(op2) == 0) && (abs_p3(op4) == 2)))
+//              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
+
+          // only include quantum numbers, if momenta correspond to third moving 
+          // frame
+//          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
+//          if( (((abs_p3(op1) == 3) && (abs_p3(op3) == 0)) || 
+//              ((abs_p3(op1) == 0) && (abs_p3(op3) == 3))) &&
+//              (((abs_p3(op2) == 3) && (abs_p3(op4) == 0)) || 
+//              ((abs_p3(op2) == 0) && (abs_p3(op4) == 3)))
+//              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
 
             write.index_Q2[0]   = op1.id;
             write.index_Corr[0] = op2.id;

@@ -611,7 +611,7 @@ void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
   clock_t time = clock();
 
   std::fill(C4_mes.data(), C4_mes.data() + C4_mes.num_elements(), 
-                                                            cmplx(0.0, 0.0));
+            cmplx(0.0, 0.0));
 
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
     std::cout << "\tcomputing the traces of 2 pi_+/-: " 

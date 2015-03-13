@@ -67,14 +67,14 @@ void LapH::Perambulator::read_perambulators_from_file (const int config_i) {
 //      std::string filename = global_data->get_path_perambulators() + "/";
 
       // data path for qbig contractions
-      sprintf(temp, "cnfg%d/rnd_vec_%01d/", config_i, rnd_vec_i);
-      std::string filename = global_data->get_path_perambulators() + "/"
-          + temp;
-
-      // data path for juqueen contractions
-//      sprintf(temp, "cnfg%d/", config_i);
+//      sprintf(temp, "cnfg%d/rnd_vec_%01d/", config_i, rnd_vec_i);
 //      std::string filename = global_data->get_path_perambulators() + "/"
 //          + temp;
+
+      // data path for juqueen contractions
+      sprintf(temp, "cnfg%d/", config_i);
+      std::string filename = global_data->get_path_perambulators() + "/"
+          + temp;
 
       //TODO: sink dilution is  hard-coded at the moment
       sprintf(infile,
