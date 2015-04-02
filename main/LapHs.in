@@ -38,13 +38,8 @@ operator_list = g3.d0.p0
 operator_list = g5.d0.p(0,0,-1):g5.d0.p(0,0,1)
 operator_list = g5.d0.p(0,0,1)
 operator_list = g4.d0.p0
-operator_list = g5.d0.p0:g5.d0.p3
-operator_list = g1.d0.p3:g2.d0.p3:g3.d0.p3
-operator_list = g1.d0.p(1,1,1):g1.d0.p(1,1,-1):g1.d0.p(1,-1,1):g1.d0:p(1,-1,-1):g1.d0.p(-1,1,1):g1.d0.p(-1,1,-1):g1.d0.p(-1,-1,1):g1.d0.p(-1,-1,-1):g2.d0.p(1,1,1):g2.d0.p(1,1,-1):g2.d0.p(1,-1,1):g2.d0:p(1,-1,-1)
-#:g2.d0.p(-1,1,1):g2.d0.p(-1,1,-1):g2.d0.p(-1,-1,1):g2.d0.p(-1,-1,-1)
-#:g3.d0.p(1,1,1):g3.d0.p(1,1,-1):g3.d0.p(1,-1,1):g3.d0:p(1,-1,-1):g3.d0.p(-1,1,1):g3.d0.p(-1,1,-1):g3.d0.p(-1,-1,1):g3.d0.p(-1,-1,-1)
-operator_list = g1.d0.p(1,1,0):g1.d0.p(1,-1,0):g1.d0.p(-1,1,0):g1.d0.p(-1,-1,0):g2.d0.p(0,1,1):g2.d0.p(0,1,-1):g2.d0.p(0,-1,1):g2.d0.p(0,-1,-1):g1.d0.p(1,0,1):g1.d0.p(1,0,-1):g1.d0.p(-1,0,1):g1.d0.p(-1,0,-1):g2.d0.p(1,1,0):g2.d0.p(1,-1,0):g2.d0.p(-1,1,0):g2.d0.p(-1,-1,0):g3.d0.p(0,1,1):g3.d0.p(0,1,-1):g3.d0.p(0,-1,1):g3.d0.p(0,-1,-1):g3.d0.p(1,0,1):g3.d0.p(1,0,-1):g3.d0.p(-1,0,1):g3.d0.p(-1,0,-1)
-operator_list = g1.d0.p(1,0,0):g1.d0.p(-1,0,0):g2.d0.p(0,1,0):g2.d0.p(0,-1,0):g3.d0.p(0,0,1):g3.d0.p(0,0,-1)
+operator_list = g5.d0.p0,4
+operator_list = g1.d0.p(2,0,0):g1.d0.p(-2,0,0):g2.d0.p(0,2,0):g2.d0.p(0,-2,0):g3.d0.p(0,0,2):g3.d0.p(0,0,-2)
 operator_list = g5.d0.p0
 operator_list = g6.d0.p0
 
@@ -61,5 +56,5 @@ correlator_list = C20:Q0:Op11:Q0:Op11
 #correlator_list = C3I10:Q0:Op1:Q0:Op0:Q0:Op1
 #correlator_list = C3I10:Q0:Op4:Q0:Op3:Q0:Op4
 correlator_list = C3I10:Q0:Op10:Q0:Op11:Q0:Op10
-correlator_list = C4I10+:Q0:Op10:Q0:Op10:Q0:Op10:Q0:Op10
+correlator_list = C4I10:Q0:Op10:Q0:Op10:Q0:Op10:Q0:Op10
 

@@ -392,9 +392,9 @@ void set_index_3pt(const Operators& in1, const Operators& in2,
           
         // only include quantum numbers, if momenta correspond to first moving 
         // frame
-        std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
-        if( (abs_p3(add_p3(op1, op3)) == 1) && 
-            (op2_p3 == add_p3(op1, op3)) ){
+//        std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//        if( (abs_p3(add_p3(op1, op3)) == 1) && 
+//            (op2_p3 == add_p3(op1, op3)) ){
 
         // only include quantum numbers, if momenta correspond to second moving
         // frame
@@ -409,6 +409,13 @@ void set_index_3pt(const Operators& in1, const Operators& in2,
 //        if( (((abs_p3(op1) == 3) && (abs_p3(op3) == 0)) || 
 //            ((abs_p3(op1) == 0) && (abs_p3(op3) == 3))) &&
 //            (op2_p3 == add_p3(op1, op3)) ){
+
+        // only include quantum numbers, if momenta correspond to fourth
+        // moving frame
+        std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+        if( (((abs_p3(op1) == 4) && (abs_p3(op3) == 0)) || 
+            ((abs_p3(op1) == 0) && (abs_p3(op3) == 4))) &&
+            (op2_p3 == add_p3(op1, op3)) ){
 
           write.index_Q2[0] = op1.id;
           write.index_Corr[0]  = op2.id;
@@ -450,17 +457,17 @@ void set_index_4pt(const Operators& in1, const Operators& in2,
 
 // HERE THE REFERENCE FRAME IS STILL HARDCODED! ONLY COMMENT IN ONE BLOCK OF IF 
 // STATEMENTS FOR THE DESIRED MOVING FRAME AND CHOOSE THE SAME IN 
-// set_index_4pt() AND THE INFILE
+// set_index_3pt() AND THE INFILE
 
           // only include quantum numbers, if momenta correspond to CMS system
 //          if( (add_p3(op1, op3) == zero) && (add_p3(op2, op4) == zero) ){
 
           // only include quantum numbers, if momenta correspond to first moving 
           // frame
-          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
-          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
-          if( (abs_p3(add_p3(op1, op3)) == 1) && (abs_p3(add_p3(op2, op4)) == 1)
-              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
+//          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+//          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
+//          if( (abs_p3(add_p3(op1, op3)) == 1) && (abs_p3(add_p3(op2, op4)) == 1)
+//              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
 
           // only include quantum numbers, if momenta correspond to second moving 
           // frame
@@ -481,6 +488,16 @@ void set_index_4pt(const Operators& in1, const Operators& in2,
 //              (((abs_p3(op2) == 3) && (abs_p3(op4) == 0)) || 
 //              ((abs_p3(op2) == 0) && (abs_p3(op4) == 3)))
 //              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
+
+          // only include quantum numbers, if momenta correspond to fourth 
+          // moving frame
+          std::array<int, 3> op2_p3 = {{(-1) *op2.p3[0], (-1)*op2.p3[1], (-1)*op2.p3[2]}};
+          std::array<int, 3> op4_p3 = {{(-1) *op4.p3[0], (-1)*op4.p3[1], (-1)*op4.p3[2]}};
+          if( (((abs_p3(op1) == 4) && (abs_p3(op3) == 0)) || 
+              ((abs_p3(op1) == 0) && (abs_p3(op3) == 4))) &&
+              (((abs_p3(op2) == 4) && (abs_p3(op4) == 0)) || 
+              ((abs_p3(op2) == 0) && (abs_p3(op4) == 4)))
+              && ( (add_p3(op1, op3) == op2_p3) || (add_p3(op1, op3) == op4_p3)) ){
 
             write.index_Q2[0]   = op1.id;
             write.index_Corr[0] = op2.id;
