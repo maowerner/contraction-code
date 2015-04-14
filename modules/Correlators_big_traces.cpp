@@ -291,7 +291,7 @@ void LapH::Correlators::compute_meson_4pt_box_trace(LapH::CrossOperator& X) {
         << std::flush;
     int t_sink_1 = (t_sink + 1) % Lt;
 
-    for(int t = 0; t < Lt-1; t++){
+    for(int t = 0; t < Lt; t++){
       const int t_source = (t_sink + 1 + t)%Lt;
       const int t_source_1 = (t_source + 1) % Lt;
 
@@ -473,7 +473,7 @@ void LapH::Correlators::compute_meson_4pt_box_trace_verbose(LapH::CrossOperator&
         << std::flush;
     int t_sink_1 = (t_sink + 1) % Lt;
 
-    for(int t = 0; t < Lt-1; t++){
+    for(int t = 0; t < Lt; t++){
       const int t_source = (t_sink + 1 + t)%Lt;
       const int t_source_1 = (t_source + 1) % Lt;
 
@@ -599,26 +599,51 @@ void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
   const int Lt = global_data->get_Lt();
 
   const vec_index_4pt op_C4 = global_data->get_lookup_4pt_trace();
-  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_4pt_3_IO();
   const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_4pt();
-  // TODO: must be changed in GlobalData {
-  // TODO: }
 
-  std::map<size_t, size_t> map_required_Q2;
-  std::map<size_t, size_t> map_required_times;
+  std::fill(C4_mes.data(), C4_mes.data() + C4_mes.num_elements(), 
+            cmplx(0.0, 0.0));
+  size_t counter = 0;
+  std::pair<std::map<size_t, size_t>::iterator, bool> ret;
+  map_required_Q2.clear();
+  map_required_times.clear();
 
   std::cout << "\n\tcomputing the traces of 2 pi_+/-:\r";
   clock_t time = clock();
 
-  std::fill(C4_mes.data(), C4_mes.data() + C4_mes.num_elements(), 
-            cmplx(0.0, 0.0));
+  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_4pt_3_IO();
+
+  for(const auto& op : op_C4_IO){
+    for(const auto& i : op.index_pt){
+      for(const auto q2 : op_C4[i].index_Q2){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(q2, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+      for(const auto corr : op_C4[i].index_Corr){
+        ret = map_required_Q2.insert(std::pair<size_t, size_t>(corr, counter));
+        if(ret.second == true)
+        // case element did not exist yet
+          counter++;
+      }
+    }
+  }
+
+  // only need quarklines without fiertz rearangement
+  map_required_times.insert(std::pair<size_t, size_t>(0, 0));
+  map_required_times.insert(std::pair<size_t, size_t>(1, 1));
+  map_required_times.insert(std::pair<size_t, size_t>(2, 2));
+
+  basic.reset_operator();
+  basic.init_operator(map_required_Q2, map_required_times, vdaggerv, peram);
 
   for(int t_sink = 0; t_sink < Lt; ++t_sink){
     std::cout << "\tcomputing the traces of 2 pi_+/-: " 
         << std::setprecision(2) << (float) t_sink/Lt*100 << "%\r" 
         << std::flush;
     int t_sink_1 = (t_sink + 1) % Lt;
-    for(int t = 0; t < Lt-1; t++){
+    for(int t = 0; t < Lt; t++){
       const int t_source = (t_sink + 1 + t)%Lt;
       const int t_source_1 = (t_source + 1) % Lt;
 
@@ -634,8 +659,10 @@ void LapH::Correlators::compute_meson_4pt_cross_trace(LapH::CrossOperator& X) {
 //      }
 //      else{
 //        if(t_source%2 == 0){
-          X.construct(map_required_Q2, map_required_times, basic, vdaggerv, op_C4_IO, 0, t_source,   t_sink, 2);
-          X.construct(map_required_Q2, map_required_times, basic, vdaggerv, op_C4_IO, 1, t_source_1, t_sink, 0);
+          X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                      op_C4_IO, 0, t_source, t_sink, 2);
+          X.construct(map_required_Q2, map_required_times, basic, vdaggerv, 
+                      op_C4_IO, 1, t_source_1, t_sink, 0);
 //        }
 //        else{
 //          X.construct(basic, vdaggerv, 0, t_source,   t_sink, 0);
@@ -840,22 +867,22 @@ void LapH::Correlators::write_C4_box(const size_t config_i){
   // C4_mes  - boost structure containing all correlators
 
   sprintf(outfile, "%s/C4I10_Dd_11_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I2+_3", C4_Dd_11_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_Dd_11_mes);
   sprintf(outfile, "%s/C4I10_Dd_12_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I2+_3", C4_Dd_12_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_Dd_12_mes);
   sprintf(outfile, "%s/C4I10_Dd_21_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I2+_3", C4_Dd_21_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_Dd_21_mes);
   sprintf(outfile, "%s/C4I10_Dd_22_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I2+_3", C4_Dd_22_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_Dd_22_mes);
 
   sprintf(outfile, "%s/C4I10_Du_11_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I2+_3", C4_Du_11_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_Du_11_mes);
   sprintf(outfile, "%s/C4I10_Du_12_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I2+_3", C4_Du_12_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_Du_12_mes);
   sprintf(outfile, "%s/C4I10_Du_21_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I2+_3", C4_Du_21_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_Du_21_mes);
   sprintf(outfile, "%s/C4I10_Du_22_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I2+_3", C4_Du_22_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_Du_22_mes);
 
 }
 /******************************************************************************/
@@ -875,7 +902,7 @@ void LapH::Correlators::write_C4_cross(const size_t config_i){
   const indexlist_4 rnd_vec_index = global_data->get_rnd_vec_4pt();
   const size_t norm1 = Lt*rnd_vec_index.size();
 
-  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_c4i10_IO();
+  const vec_index_IO_1 op_C4_IO = global_data->get_lookup_4pt_3_IO();
 
   if(op_C4_IO.size() == 0)
     return;
@@ -889,7 +916,7 @@ void LapH::Correlators::write_C4_cross(const size_t config_i){
   // C4_mes  - boost structure containing all correlators
 
   sprintf(outfile, "%s/C4I2+_3_conf%04d.dat", outpath.c_str(), (int)config_i);
-  export_corr_IO(outfile, op_C4_IO, "C4I10", C4_mes);
+  export_corr_IO(outfile, op_C4_IO, "C4I2+", C4_mes);
 
 }
 

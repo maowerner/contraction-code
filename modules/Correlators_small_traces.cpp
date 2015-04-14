@@ -136,6 +136,10 @@ void LapH::Correlators::build_Q2_trace(BasicOperator& basic,
     }
   }
 
+  if(map_required_Q2.size() == 0){
+    return;
+  }
+
   // only need quarklines without fiertz rearangement
   map_required_times.insert(std::pair<size_t, size_t>(1, 0));
 
@@ -238,6 +242,10 @@ void LapH::Correlators::build_Q2_trace_uncharged(BasicOperator& basic,
           counter++;
       }
     }
+  }
+
+  if(map_required_u.size() == 0){
+    return;
   }
 
   basic.reset_operator();
@@ -528,7 +536,7 @@ if(op_C4_IO.size() == 0)
   // outfile - filename
   // C4_mes  - boost structure containing all correlators
 
-  sprintf(outfile, "%s/C4_1_conf%04d.dat", outpath.c_str(), (int)config_i);
+  sprintf(outfile, "%s/C4I2+_1_conf%04d.dat", outpath.c_str(), (int)config_i);
   export_corr_IO(outfile, op_C4_IO, "C4I2+_1", C4_mes);
 
   time = clock() - time;
@@ -598,7 +606,7 @@ void LapH::Correlators::build_and_write_C4_2(const size_t config_i){
   // outfile - filename
   // C4_mes  - boost structure containing all correlators
 
-  sprintf(outfile, "%s/C4_2_conf%04d.dat", outpath.c_str(), (int)config_i);
+  sprintf(outfile, "%s/C4I2+_2_conf%04d.dat", outpath.c_str(), (int)config_i);
   export_corr_IO(outfile, op_C4_IO, "C4I2+_2", C4_mes);
 
   time = clock() - time;

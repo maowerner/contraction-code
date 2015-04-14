@@ -171,8 +171,8 @@ void LapH::CrossOperator::construct(std::map<size_t, size_t> map_required_Q2,
     t2 = (t_source + 1)%Lt;
   }
  
-#pragma omp parallel
-#pragma omp single
+//#pragma omp parallel
+//#pragma omp single
 {     
   for(const auto& op : op_C4_IO){
   for(const auto& i : op.index_pt){
@@ -181,7 +181,7 @@ void LapH::CrossOperator::construct(std::map<size_t, size_t> map_required_Q2,
   size_t id_Corr;
     if(type < 3){
       id_Q2 = op_C4[i].index_Q2[nb];
-      id_Corr = op_C4[i].index_Corr[nb];
+      id_Corr = op_C4[i].index_Corr[(nb+1)%2];
     }
     else if(nb == 0){
       id_Q2 = op_C4[i].index_Q2[1];
@@ -193,7 +193,7 @@ void LapH::CrossOperator::construct(std::map<size_t, size_t> map_required_Q2,
     }
 
     if(type < 5){
-      #pragma omp task shared (op)
+//      #pragma omp task shared (op)
       for(auto& rnd_it : rnd_vec_index) {
         compute_X(basic, id_Corr, 
             basic.get_operator(t_source, tu, map_required_times[td], 
@@ -204,7 +204,7 @@ void LapH::CrossOperator::construct(std::map<size_t, size_t> map_required_Q2,
       } // lover random vectors
     }
     else{
-      #pragma omp task shared (op)
+//      #pragma omp task shared (op)
       for(auto& rnd_it : rnd_vec_index) {
         compute_X_verbose(basic, id_Q2, 
             basic.get_operator(t2, tu, map_required_times[td], 
