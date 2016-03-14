@@ -1,0 +1,12 @@
+# compiled files
+*.pyc
+*.o
+*.d
+# plots
+*.pdf
+# data files
+*.dat
+*.npy
+# executables
+LapHs
+

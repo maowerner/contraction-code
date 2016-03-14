@@ -18,7 +18,7 @@ int main (int ac, char* av[]) {
   // initialization of OMP paralization
   // TODO: number of thread must be set via inputfile
   Eigen::initParallel();
-  omp_set_num_threads(4);
+  omp_set_num_threads(1);
   Eigen::setNbThreads(1); // parallel eigen makes everything slower
 
   // reading in global parameters from input file
