@@ -19,7 +19,7 @@ LapH::Perambulator::Perambulator () : perambulator() {
   const int number_of_inversions = (Lt / quarks[0].number_of_dilution_T)
       * quarks[0].number_of_dilution_E * quarks[0].number_of_dilution_D;
 
-  // memory for perambulator and random vector
+  // memory for perambulator
   perambulator.resize(number_of_rnd_vec);
   for(int i = 0; i < number_of_rnd_vec; ++i){
     perambulator[i] = Eigen::MatrixXcd::Zero(4 * number_of_eigen_vec * Lt,
@@ -67,14 +67,14 @@ void LapH::Perambulator::read_perambulators_from_file (const int config_i) {
 //      std::string filename = global_data->get_path_perambulators() + "/";
 
       // data path for qbig contractions
-      sprintf(temp, "cnfg%d/rnd_vec_%01d/", config_i, rnd_vec_i);
-      std::string filename = global_data->get_path_perambulators() + "/"
-          + temp;
-
-      // data path for juqueen contractions
-//      sprintf(temp, "cnfg%d/", config_i);
+//      sprintf(temp, "cnfg%d/rnd_vec_%01d/", config_i, rnd_vec_i);
 //      std::string filename = global_data->get_path_perambulators() + "/"
 //          + temp;
+
+      // data path for juqueen contractions
+      sprintf(temp, "cnfg%d/", config_i);
+      std::string filename = global_data->get_path_perambulators() + "/"
+          + temp;
 
       //TODO: sink dilution is  hard-coded at the moment
       sprintf(infile,

@@ -27,6 +27,9 @@ namespace global_data_utils {
                       vec_pd_rVdaggerVr& lookup_rvdvr);
   void set_index_2pt(const Operators& in1, const Operators& in2,
                      const vec_pdg_Corr& lookup_corr, vec_index_2pt& lookup_2pt);
+  void set_index_3pt(const Operators& in1, const Operators& in2, 
+                     const Operators& in3, const vec_pdg_Corr& lookup_corr, 
+                     vec_index_3pt& lookup_3pt);
   void set_index_4pt(const Operators& in1, const Operators& in2, 
                      const Operators& in3, const Operators& in4,
                      const vec_pdg_Corr& lookup_corr, vec_index_4pt& lookup_4pt);

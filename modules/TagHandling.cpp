@@ -149,7 +149,7 @@ void string_to_tag(const std::string& in, Tag& out){
 
 void tag_to_string(const Tag& in, std::string& out){
   size_t no_part = in.q_cont.length();
-  std::cout << in.q_cont << std::endl;
+//  std::cout << in.q_cont << std::endl;
   for(size_t i = 0; i < no_part; ++i){
     //get string of quantum each quantum number
     out.push_back(in.q_cont[i]);

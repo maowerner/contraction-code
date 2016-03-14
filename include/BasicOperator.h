@@ -21,18 +21,48 @@ public:
   BasicOperator();
   ~BasicOperator () {};
 
-  void init_operator(const char dilution, 
+  void reset_operator();
+
+  void init_operator_verbose(const std::map<size_t, size_t> map_required_Q2,
+                             const std::map<size_t, size_t> map_required_times,
+                             const LapH::VdaggerV& vdaggerv,
+                             const LapH::Perambulator& peram);
+
+  void init_operator(const std::map<size_t, size_t> map_required_Q2,
+                     const std::map<size_t, size_t> map_required_times,
                      const LapH::VdaggerV& vdaggerv,
                      const LapH::Perambulator& peram);
 
-  // returns D_u^-1 Gamma D_d^-1
+  void init_operator_u(const std::map<size_t, size_t> map_required_u,
+                       const LapH::VdaggerV& vdaggerv,
+                       const LapH::Perambulator& peram);
+
+  void init_operator_d(const std::map<size_t, size_t> map_required_d,
+                       const LapH::VdaggerV& vdaggerv,
+                       const LapH::Perambulator& peram);
+
+
+  // returns (P^(b) rho_i)^dagger D_d^-1 V^dagger V Gamma D_u^-1 (P^(b) rho_j)
   inline const Eigen::MatrixXcd& get_operator(const int t1, const int t2,
                                  const int t3, const size_t index,
                                  const size_t rnd_i, const size_t rnd_j) const {
     return Q2[t1][t2][t3][index][rnd_i][rnd_j];
   }
 
-  
+  // returns (P^(b) rho_i)^dagger V^dagger V Gamma D_u^-1 (P^(b) rho_j)
+  inline const Eigen::MatrixXcd& get_operator_u(const int t1, const int t2,
+                                 const size_t index,
+                                 const size_t rnd_i, const size_t rnd_j) const {
+    return Q1_u[t1][t2][index][rnd_i][rnd_j];
+  }
+
+   // returns (P^(b) rho_i)^dagger V^dagger V Gamma D_u^-1 (P^(b) rho_j)
+  inline const Eigen::MatrixXcd& get_operator_d(const int t1, const int t2,
+                                 const size_t index,
+                                 const size_t rnd_i, const size_t rnd_j) const {
+    return Q1_d[t1][t2][index][rnd_i][rnd_j];
+  }
+
 
   void mult_dirac(const Eigen::MatrixXcd& matrix, Eigen::MatrixXcd& reordered,
                   const size_t index) const;
@@ -45,6 +75,9 @@ public:
 
 private:
   array_Xcd_d6_eigen Q2;
+  array_Xcd_d6_eigen Q2_verbose;
+  array_Xcd_d5_eigen Q1_u;
+  array_Xcd_d5_eigen Q1_d;
 
 };
 

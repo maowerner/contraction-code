@@ -42,6 +42,8 @@ LapH::VdaggerV::VdaggerV() : vdaggerv(), rvdaggervr(), momentum(),
   // must be mapped correctly from outside by addressing the momentum
   // correctly and daggering
   vdaggerv.resize(boost::extents[nb_VdaggerV][Lt]);
+  rvdaggerv.resize(boost::extents[nb_rVdaggerVr][Lt][nb_rnd]);
+  vdaggervr.resize(boost::extents[nb_rVdaggerVr][Lt][nb_rnd]);
   rvdaggervr.resize(boost::extents[nb_rVdaggerVr][Lt][nb_rnd][nb_rnd]);
 
   // the momenta only need to be calculated for a subset of quantum numbers
@@ -101,7 +103,7 @@ void LapH::VdaggerV::build_vdaggerv (const int config_i) {
   const size_t Lt = global_data->get_Lt();
   const size_t dim_row = global_data->get_dim_row();
   const size_t nb_ev = global_data->get_number_of_eigen_vec();
-  const size_t id_unity = global_data->get_index_of_unity();
+  const int id_unity = global_data->get_index_of_unity();
 
   const vec_pd_VdaggerV op_VdaggerV = global_data->get_lookup_VdaggerV();
 
@@ -167,7 +169,7 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
   }
 
   clock_t t2 = clock();
-  std::cout << "\tbuild rvdaggervr:";
+  std::cout << "\tbuild rvdaggerv and rvdaggervr:";
 
   const size_t Lt = global_data->get_Lt();
   const size_t nb_ev = global_data->get_number_of_eigen_vec();
@@ -178,8 +180,12 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
   const vec_pd_rVdaggerVr op_rVdaggerVr = global_data->get_lookup_rVdaggerVr();
   const vec_pdg_Corr op_Corr = global_data->get_lookup_corr();
 
+  std::fill(rvdaggerv.data(), rvdaggerv.data() + rvdaggerv.num_elements(), 
+            Eigen::MatrixXcd::Zero(dilE, 4*nb_ev));
+  std::fill(vdaggervr.data(), vdaggervr.data() + vdaggervr.num_elements(), 
+            Eigen::MatrixXcd::Zero(nb_ev, 4*dilE));
   std::fill(rvdaggervr.data(), rvdaggervr.data() + rvdaggervr.num_elements(), 
-            Eigen::MatrixXcd::Zero(dilE, 4*dilE));
+            Eigen::MatrixXcd::Zero(4*dilE, 4*dilE));
 
   // TODO: just a workaround
   // can be changed to op by running over p = op/nb_dg, but dis currently
@@ -198,27 +204,34 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
       size_t id_VdaggerV = op_Corr[op.index].id_vdv;
 
       for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
-        Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(nb_ev, 4*dilE);
         // dilution from left
         for(size_t block= 0; block < 4; block++){
         for(size_t vec_i = 0; vec_i < nb_ev; ++vec_i) {
           size_t blk_i =  block + vec_i * 4 + 4 * nb_ev * t;
           
-          M.block(0, vec_i%dilE + dilE*block, nb_ev, 1) += 
-               vdaggerv[id_VdaggerV][t].col(vec_i) * 
-               rnd_vec[rnd_i][blk_i];
+          rvdaggerv[op.id][t][rnd_i]
+              .block(vec_i%dilE, block*nb_ev, 1, nb_ev) += 
+            std::conj(rnd_vec[rnd_i][blk_i]) * 
+            vdaggerv[id_VdaggerV][t].row(vec_i);
+
+          vdaggervr[op.id][t][rnd_i]
+              .col(block*dilE + vec_i%dilE) += 
+            rnd_vec[rnd_i][blk_i] * 
+            vdaggerv[id_VdaggerV][t].col(vec_i);
         }}// end of dilution
+
         for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j){
         if(rnd_i != rnd_j){
           // dilution from right
+          for(size_t row = 0; row < 4; row++){
           for(size_t block = 0; block < 4; block++){
           for(size_t vec_j = 0; vec_j < nb_ev; ++vec_j) {
-            size_t blk_j =  block + vec_j * 4 + 4 * nb_ev * t;
-            rvdaggervr[op.id][t][rnd_j][rnd_i]
-                          .block(vec_j%dilE, dilE*block , 1, dilE) +=
-                M.block(vec_j, dilE*block, 1, dilE) * 
-                std::conj(rnd_vec[rnd_j][blk_j]);
-          }}// end of dilution
+            size_t blk_j =  row + vec_j * 4 + 4 * nb_ev * t;
+            rvdaggervr[op.id][t][rnd_i][rnd_j]
+                .block(row*dilE, block*dilE+vec_j%dilE, dilE, 1) +=
+              rvdaggerv[op.id][t][rnd_i].col(block*nb_ev+vec_j) * 
+              rnd_vec[rnd_j][blk_j];
+          }}}// end of dilution
         }}// rnd_j loop ends here
       }// rnd_i loop ends here
     }
@@ -236,6 +249,16 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
     if(op.adjoint == true){
 
       for(size_t rnd_i = 0; rnd_i < nb_rnd; ++rnd_i) {
+
+        for(size_t block = 0; block < 4; block++){
+
+          rvdaggerv[op.id][t][rnd_i].block(0, block*nb_ev, dilE, nb_ev) = 
+            (vdaggervr[op.id_adjoint][t][rnd_i].block(0, block*dilE, nb_ev, dilE)).adjoint();
+          vdaggervr[op.id][t][rnd_i].block(0, block*dilE, nb_ev, dilE) = 
+            (rvdaggerv[op.id_adjoint][t][rnd_i].block(0, block*nb_ev, dilE, nb_ev)).adjoint();
+
+        }
+
       for(size_t rnd_j = 0; rnd_j < nb_rnd; ++rnd_j){
       if(rnd_i != rnd_j){
 
@@ -244,12 +267,8 @@ void LapH::VdaggerV::build_rvdaggervr(const int config_i,
         // vector of blocks. To reproduce the correct behavior under adjoining, 
         // the blocks have to be adjoined seperately.
         // is .adjoint().transpose() faster?
-        for(size_t block = 0; block < 4; block++){
-          rvdaggervr[op.id][t][rnd_j][rnd_i]
-                              .block(0, block*dilE, dilE, dilE) =
-            (rvdaggervr[op.id_adjoint][t][rnd_i][rnd_j]
-                              .block(0, block*dilE, dilE, dilE)).adjoint();
-        }
+        rvdaggervr[op.id][t][rnd_j][rnd_i] =
+          rvdaggervr[op.id_adjoint][t][rnd_i][rnd_j].adjoint();
       }}}// loops over rnd vecs
 
     }
